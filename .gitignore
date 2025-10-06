@@ -1,0 +1,4 @@
+ft_lex
+*.o
+lex.yy
+lex.yy.c
