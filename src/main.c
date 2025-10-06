@@ -223,7 +223,7 @@ void print_regex_tree(RegexTreeNode* r, char* prefix, int is_last) {
     }
     
     // Prepare prefix for children
-    char new_prefix[256];
+    char new_prefix[256] = {};
     snprintf(new_prefix, sizeof(new_prefix), "%s%s", prefix, is_last ? "    " : "│   ");
     
     // Print children

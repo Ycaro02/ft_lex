@@ -10,3 +10,7 @@ ENV TZ=Europe/Paris
 ENV EDITOR=/bin/vim
 
 RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+
+RUN git config --global --add safe.directory /app
+
+RUN echo 'alias add_all="git add . && git commit -m"' >> /root/.zshrc
