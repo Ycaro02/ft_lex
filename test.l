@@ -1,5 +1,5 @@
 %%
 
-[0-9] printf("Digit %s\n", yytext);
+ab+ printf("MATCH ab+ %s\n", yytext);
 
 . printf("ANY %s\n", yytext);

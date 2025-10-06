@@ -3,7 +3,7 @@
 
 typedef enum RegexType{
     REG_CHAR,           // simple char ex: 'a'
-    // REG_ANY,            // '.' = any character
+    REG_ANY,            // '.' = any character
     REG_CLASS,          // [abc] or [a-z]
     REG_CLASS_NEG,      // [^abc] or [^a-z]
     REG_CONCAT,         // AB
@@ -26,20 +26,38 @@ typedef struct RegexTreeNode_s {
 const char  *input;
 int         pos = 0;
 
+
+/**
+ * @brief Get the length of the input string
+ * @return Length of the input string
+ */
 int len() {
-    return strlen(input);
+    return (strlen(input));
 }
 
+/**
+ * @brief Peek at the current character in the input without consuming it
+ * @return The current character
+ */
 char peek() {
-    return input[pos];
+    return (input[pos]);
 }
 
+
+/**
+ * @brief Consume and return the next character in the input
+ * @return The next character
+ */
 char next() {
-    return input[pos++];
+    return (input[pos++]);
 }
 
+/**
+ * @brief Check if we've reached the end of the input
+ * @return 1 if at end, 0 otherwise
+ */
 int end() {
-    return input[pos] == '\0';
+    return (input[pos] == '\0');
 }
 
 RegexTreeNode* parse_regex();
@@ -49,7 +67,15 @@ RegexTreeNode* parse_repeat();
 RegexTreeNode* parse_atom();
 RegexTreeNode* parse_class();
 
-
+/**
+ * @brief Create a new regex tree node
+ * @param type The type of the node
+ * @param left The left child
+ * @param right The right child
+ * @param str The string for character classes
+ * @param c The character for single character nodes
+ * @return Pointer to the newly created node
+ */
 RegexTreeNode* RegexTreeNode_create(RegexType type, RegexTreeNode *left, RegexTreeNode *right, char *str, char c) {
     RegexTreeNode *node = malloc(sizeof(RegexTreeNode));
     if (!node) {
@@ -73,6 +99,10 @@ RegexTreeNode* RegexTreeNode_create(RegexType type, RegexTreeNode *left, RegexTr
     return (node);
 }
 
+/**
+ * @brief Free the regex tree
+ * @param node The root of the regex tree
+ */
 void RegexTreeNode_free(RegexTreeNode *node) {
     if (!node) return;
     RegexTreeNode_free(node->left);
@@ -81,6 +111,10 @@ void RegexTreeNode_free(RegexTreeNode *node) {
     free(node);
 }
 
+/**
+ * @brief Parse an atom: either a character class, a parenthesized expression, or a single character
+ * @return The root of the atom subtree
+ */
 RegexTreeNode* parse_atom() {
     // First try to parse a character class
     RegexTreeNode* class_node = parse_class();
@@ -100,6 +134,10 @@ RegexTreeNode* parse_atom() {
     }
 }
 
+/**
+ * @brief Parse a character class like [abc] or [^abc]
+ * @return The root of the character class subtree
+ */
 RegexTreeNode* parse_class() {
     if (peek() == '[') {
         next(); // skip '['
@@ -134,6 +172,10 @@ RegexTreeNode* parse_class() {
     return (NULL);
 }
 
+/**
+ * @brief Parse repetition operators (*, +, ?)
+ * @return The root of the repetition subtree
+ */
 RegexTreeNode* parse_repeat() {
     RegexTreeNode* atom = parse_atom();
     char c = peek();
@@ -152,6 +194,10 @@ RegexTreeNode* parse_repeat() {
     return (atom);
 }
 
+/**
+ * @brief Parse concatenation (AB)
+ * @return The root of the concatenation subtree
+ */
 RegexTreeNode* parse_concat() {
     RegexTreeNode* left = parse_repeat();
 
@@ -166,6 +212,10 @@ RegexTreeNode* parse_concat() {
     return (left);
 }
 
+/**
+ * @brief Parse alternation (A|B)
+ * @return The root of the alternation subtree
+ */
 RegexTreeNode* parse_alt() {
     RegexTreeNode* left = parse_concat();
 
@@ -178,14 +228,27 @@ RegexTreeNode* parse_alt() {
     return (left);
 }
 
+/**
+ * @brief Parse the full regex
+ * @return The root of the regex tree
+ */
 RegexTreeNode* parse_regex() {
     if (end()) return (NULL);
 
+    if (len() == 1 && peek() == '.') {
+        return RegexTreeNode_create(REG_ANY, NULL, NULL, NULL, 0);
+    }
 
-    return parse_alt();
-
+    return (parse_alt());
 }
 
+
+/**
+ * @brief Helper function to print the regex tree
+ * @param r The root of the regex tree
+ * @param prefix The prefix string for formatting
+ * @param is_last Whether this node is the last child
+ */
 void print_regex_tree(RegexTreeNode* r, char* prefix, int is_last) {
     if (!r) return;
     
@@ -226,55 +289,172 @@ void print_regex_tree(RegexTreeNode* r, char* prefix, int is_last) {
     char new_prefix[256] = {};
     snprintf(new_prefix, sizeof(new_prefix), "%s%s", prefix, is_last ? "    " : "│   ");
     
-    // Print children
-    int has_left = (r->left != NULL);
-    int has_right = (r->right != NULL);
-    
-    if (has_left) {
-        print_regex_tree(r->left, new_prefix, !has_right);
+    if (r->left) {
+        print_regex_tree(r->left, new_prefix, r->right == NULL);
     }
-    if (has_right) {
+    if (r->right) {
         print_regex_tree(r->right, new_prefix, 1);
     }
 }
 
-void print_regex(RegexTreeNode* r, int depth) {
+/**
+ * @brief Print the regex tree
+ * @param r The root of the regex tree
+ */
+void print_regex(RegexTreeNode* r) {
     if (!r) {
         printf("Empty tree\n");
         return;
     }
-    (void)depth;
-
     printf("Regex Tree:\n");
     print_regex_tree(r, "", 1);
     printf("\n");
 }
 
-int main(int argc, char* argv[]) {
-    if (argc < 2) {
-        printf("Usage: %s <regex>\n", argv[0]);
-        return 1;
+/**
+ * @brief Match the input string against the regex tree
+ * @param r The root of the regex tree
+ * @param str The input string to match
+ * @return pointer to the position in the string after matching, or NULL if no match
+ */
+char *match_regex(RegexTreeNode* r, char *str) {
+
+    INFO("Scanning '%s'\n", str);
+
+    switch (r->type) {
+        case REG_CHAR:
+            DBG("Matching CHAR '%c' against '%c'\n", r->c, *str);
+            if (*str == r->c) {
+                INFO("Matched CHAR '%c'\n", r->c);
+                return (str + 1);
+            }
+            return (NULL);
+        case REG_ANY:
+            DBG("Matching ANY against '%c'\n", *str);
+            if (*str != '\0') {
+                INFO("Matched ANY '%c'\n", *str);
+                return (str + 1);
+            }
+            return (NULL);
+        case REG_CLASS: {
+            // if (*str != '\0' && strchr(r->str, *str)) {
+            //     return (str + 1);
+            // }
+            WARN("REG_CLASS matching not implemented yet\n");
+            return (NULL);
+        }
+        case REG_CLASS_NEG: {
+            WARN("REG_CLASS_NEG matching not implemented yet\n");
+            // if (*str != '\0' && !strchr(r->str, *str)) {
+            //     return (str + 1);
+            // }
+            return (NULL);
+        }
+        case REG_CONCAT: {
+            DBG("Matching CONCAT against '%c'\n", *str);
+            char *next_str = match_regex(r->left, str);
+            if (next_str) {
+                INFO("Matched CONCAT left part\n");
+                return match_regex(r->right, next_str);
+            }
+            return (NULL);
+        }
+        case REG_ALT: {
+            DBG("Matching ALT against '%c'\n", *str);
+            char *next_str = match_regex(r->left, str);
+            if (next_str) {
+                INFO("Matched ALT left part\n");
+                return (next_str);
+            }
+            return match_regex(r->right, str);
+        }
+        case REG_STAR: {
+            DBG("Matching STAR against '%c'\n", *str);
+            char *next_str = str;
+            while ((next_str = match_regex(r->left, next_str)) != NULL) {
+                INFO("Matched STAR\n");
+                str = next_str;
+            }
+            return (str);
+        }
+        case REG_PLUS: {
+            DBG("Matching PLUS against '%c'\n", *str);
+            char *next_str = match_regex(r->left, str);
+            if (!next_str) return (NULL);
+            str = next_str;
+            while ((next_str = match_regex(r->left, str)) != NULL) {
+                INFO("Matched PLUS\n");
+                str = next_str;
+            }
+            return (str);
+        }
+        case REG_OPTIONAL: {
+            DBG("Matching OPTIONAL against '%c'\n", *str);
+            char *next_str = match_regex(r->left, str);
+            if (next_str) {
+                INFO("Matched OPTIONAL\n");
+                return (next_str);
+            }
+            return (str);
+        }
+        default: {
+            ERR("Unknown regex node type\n");
+            return (NULL);
+        }
     }
+    return (NULL);
+}
+
+int main(int argc, char* argv[]) {
+    
+    set_log_level(L_INFO);
+
+    if (argc < 3) {
+        INFO("Usage: %s <regex> <str_to_parse>\n", argv[0]);
+        return (1);
+    }
+
+
+    char *str = argv[2];
 
     input = argv[1];
     pos = 0;
 
-    printf("Parsing regex: '%s'\n", input);
-    printf("=====================================\n");
+    INFO("Parsing regex: '%s'\n", input);
+    INFO("=====================================\n");
     
-    RegexTreeNode* tree = parse_regex();
+    RegexTreeNode *tree = parse_regex();
     
     if (tree) {
-        print_regex(tree, 0);
+        print_regex(tree);
+        INFO("Parsing completed successfully!\n");
+        INFO("Final position: %d/%d\n", pos, (int)strlen(input));
+        INFO("=====================================\n");
         
-        printf("Parsing completed successfully!\n");
-        printf("Final position: %d/%d\n", pos, (int)strlen(input));
-        
-        RegexTreeNode_free(tree);
     } else {
-        printf("Failed to parse regex!\n");
+        INFO("Failed to parse regex!\n");
     }
     
-    return 0;
+    char *tmp = str;
+
+    while (tmp && *tmp) {
+        INFO("Attempting to match at: '%s'\n", tmp);
+        
+        char *old = tmp;
+        char *res = match_regex(tree, tmp);
+        
+        if (res) {
+            INFO(PURPLE"Matched up to: '%s'\n"RESET, old);
+            tmp = res;
+        } else {
+            WARN("No match at: '%s'\n", tmp);
+            tmp++;
+        }
+        INFO("Continuing match at: '%s'\n", tmp);
+    }
+
+    RegexTreeNode_free(tree);
+
+    return (0);
 }
 

@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "*.def": "source.def",
-        "log.h": "c"
+        "log.h": "c",
+        "random": "c"
     }
 }
