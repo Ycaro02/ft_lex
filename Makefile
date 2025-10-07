@@ -28,6 +28,9 @@ run:
 lex:
 	@./rsc/run_lex.sh test.l "$(word 2,$(MAKECMDGOALS))"
 
+test_match: $(NAME)
+	@./rsc/tester/test_match.sh
+
 bonus: clear_mandatory $(NAME)
 
 clear_mandatory:

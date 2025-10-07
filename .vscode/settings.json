@@ -2,6 +2,7 @@
     "files.associations": {
         "*.def": "source.def",
         "log.h": "c",
-        "random": "c"
+        "random": "c",
+        "sstream": "c"
     }
 }

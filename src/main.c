@@ -24,24 +24,26 @@ typedef struct RegexTreeNode_s {
 } RegexTreeNode;
 
 
-const char  *input;
-int         pos = 0;
-
+typedef struct String {
+    char *str;
+    int  pos;
+    int  len;
+} String;
 
 /**
  * @brief Get the length of the input string
  * @return Length of the input string
  */
-int len() {
-    return (strlen(input));
+int len(String *s) {
+    return (s->len);
 }
 
 /**
  * @brief Peek at the current character in the input without consuming it
  * @return The current character
  */
-char peek() {
-    return (input[pos]);
+char peek(String *s) {
+    return (s->str[s->pos]);
 }
 
 
@@ -49,24 +51,24 @@ char peek() {
  * @brief Consume and return the next character in the input
  * @return The next character
  */
-char next() {
-    return (input[pos++]);
+char next(String *s) {
+    return (s->str[s->pos++]);
 }
 
 /**
  * @brief Check if we've reached the end of the input
  * @return 1 if at end, 0 otherwise
  */
-int end() {
-    return (input[pos] == '\0');
+int end(String *s) {
+    return (s->str[s->pos] == '\0');
 }
 
-RegexTreeNode* parse_regex();
-RegexTreeNode* parse_alt();
-RegexTreeNode* parse_concat();
-RegexTreeNode* parse_repeat();
-RegexTreeNode* parse_atom();
-RegexTreeNode* parse_class();
+RegexTreeNode* parse_regex(String *s);
+RegexTreeNode* parse_alt(String *s);
+RegexTreeNode* parse_concat(String *s);
+RegexTreeNode* parse_repeat(String *s);
+RegexTreeNode* parse_atom(String *s);
+RegexTreeNode* parse_class(String *s);
 
 /**
  * @brief Create a new regex tree node
@@ -116,21 +118,21 @@ void RegexTreeNode_free(RegexTreeNode *node) {
  * @brief Parse an atom: either a character class, a parenthesized expression, or a single character
  * @return The root of the atom subtree
  */
-RegexTreeNode* parse_atom() {
+RegexTreeNode* parse_atom(String *s) {
     // First try to parse a character class
-    RegexTreeNode* class_node = parse_class();
+    RegexTreeNode* class_node = parse_class(s);
     if (class_node) {
         return class_node;
     }
     
     // Then try to parse parentheses
-    if (peek() == '(') {
-        next(); // skip '('
-        RegexTreeNode* r = parse_regex();
-        if (peek() == ')') next(); // skip ')'
+    if (peek(s) == '(') {
+        next(s); // skip '('
+        RegexTreeNode* r = parse_regex(s);
+        if (peek(s) == ')') next(s); // skip ')'
         return r;
     } else {
-        char c = next();
+        char c = next(s);
         return RegexTreeNode_create(REG_CHAR, NULL, NULL, NULL, c);
     }
 }
@@ -139,29 +141,29 @@ RegexTreeNode* parse_atom() {
  * @brief Parse a character class like [abc] or [^abc]
  * @return The root of the character class subtree
  */
-RegexTreeNode* parse_class() {
-    if (peek() == '[') {
-        next(); // skip '['
+RegexTreeNode* parse_class(String *s) {
+    if (peek(s) == '[') {
+        next(s); // skip '['
         int neg = 0;
-        if (peek() == '^') {
+        if (peek(s) == '^') {
             neg = 1;
-            next(); // skip '^'
+            next(s); // skip '^'
         }
 
         char buffer[256] = {0};
         int idx = 0;
 
-        if (len() >= 255) {
+        if (len(s) >= 255) {
             ERR("Character class too long\n");
             return (NULL);
         }
 
-        while (!end() && peek() != ']') {
-            buffer[idx++] = next();
+        while (!end(s) && peek(s) != ']') {
+            buffer[idx++] = next(s);
         }
         buffer[idx] = '\0';
 
-        if (peek() == ']') next(); // skip ']'
+        if (peek(s) == ']') next(s); // skip ']'
 
         if (neg) {
             return RegexTreeNode_create(REG_CLASS_NEG, NULL, NULL, buffer, 0);
@@ -177,18 +179,18 @@ RegexTreeNode* parse_class() {
  * @brief Parse repetition operators (*, +, ?)
  * @return The root of the repetition subtree
  */
-RegexTreeNode* parse_repeat() {
-    RegexTreeNode* atom = parse_atom();
-    char c = peek();
+RegexTreeNode* parse_repeat(String *s) {
+    RegexTreeNode* atom = parse_atom(s);
+    char c = peek(s);
 
     if (c == '*') {
-        next();
+        next(s);
         return RegexTreeNode_create(REG_STAR, atom, NULL, NULL, 0);
     } else if (c == '+') {
-        next();
+        next(s);
         return RegexTreeNode_create(REG_PLUS, atom, NULL, NULL, 0);
     } else if (c == '?') {
-        next();
+        next(s);
         return RegexTreeNode_create(REG_OPTIONAL, atom, NULL, NULL, 0);
     }
     return (atom);
@@ -198,14 +200,14 @@ RegexTreeNode* parse_repeat() {
  * @brief Parse concatenation (AB)
  * @return The root of the concatenation subtree
  */
-RegexTreeNode* parse_concat() {
-    RegexTreeNode* left = parse_repeat();
+RegexTreeNode* parse_concat(String *s) {
+    RegexTreeNode* left = parse_repeat(s);
 
-    while (!end()) {
-        char c = peek();
+    while (!end(s)) {
+        char c = peek(s);
         if (c == ')' || c == '|') break; // end concatenation on ')' or '|'
 
-        RegexTreeNode* right = parse_repeat();
+        RegexTreeNode* right = parse_repeat(s);
         left = RegexTreeNode_create(REG_CONCAT, left, right, NULL, 0);
     }
 
@@ -216,12 +218,12 @@ RegexTreeNode* parse_concat() {
  * @brief Parse alternation (A|B)
  * @return The root of the alternation subtree
  */
-RegexTreeNode* parse_alt() {
-    RegexTreeNode* left = parse_concat();
+RegexTreeNode* parse_alt(String *s) {
+    RegexTreeNode* left = parse_concat(s);
 
-    while (peek() == '|') {
-        next(); // skip '|'
-        RegexTreeNode* right = parse_concat();
+    while (peek(s) == '|') {
+        next(s); // skip '|'
+        RegexTreeNode* right = parse_concat(s);
         left = RegexTreeNode_create(REG_ALT, left, right, NULL, 0);
     }
 
@@ -232,10 +234,10 @@ RegexTreeNode* parse_alt() {
  * @brief Parse the full regex
  * @return The root of the regex tree
  */
-RegexTreeNode* parse_regex() {
-    if (end()) return (NULL);
+RegexTreeNode* parse_regex(String *s) {
+    if (end(s)) return (NULL);
 
-    return (parse_alt());
+    return (parse_alt(s));
 }
 
 
@@ -408,27 +410,30 @@ int main(int argc, char* argv[]) {
     }
 
 
-    char *str = argv[2];
+    char *input = argv[2];
 
-    input = argv[1];
-    pos = 0;
+    String s = {
+        .str = argv[1],
+        .pos = 0,
+        .len = strlen(argv[1])
+    };
 
-    INFO("Parsing regex: '%s'\n", input);
+    INFO("Parsing regex: '%s'\n", s.str);
     INFO("=====================================\n");
     
-    RegexTreeNode *tree = parse_regex();
+    RegexTreeNode *tree = parse_regex(&s);
     
     if (tree) {
         print_regex(tree);
         INFO("Parsing completed successfully!\n");
-        INFO("Final position: %d/%d\n", pos, (int)strlen(input));
+        INFO("Final position: %d/%d\n", s.pos, (int)strlen(s.str));
         INFO("=====================================\n");
         
     } else {
         ERR("Failed to parse regex!\n");
     }
     
-    char *tmp = str;
+    char *tmp = input;
 
     while (tmp && *tmp) {
         DBG("Attempting to match at: '%s'\n", tmp);
