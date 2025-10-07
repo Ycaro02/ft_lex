@@ -51,85 +51,83 @@ char *match_regex(RegexTreeNode* r, char *str) {
 
     // INFO("Scanning '%s'\n", str);
 
+    // set_log_level(L_DEBUG);
+
+    char *next = NULL;
+
     switch (r->type) {
         case REG_CHAR:
             DBG("Matching CHAR '%c' against '%c'\n", r->c, *str);
-            if (*str == r->c) {
+            if (*str == r->c || (*str != '\0' && r->c == '.')) {
                 DBG("Matched CHAR '%c'\n", r->c);
-                return (str + 1);
-            } 
-            else if (*str != '\0' && r->c == '.') {
-                DBG("Matched CHAR ANY '%c'\n", *str);
-                return (str + 1);
+                next = str + 1;
+            } else {
+                DBG("Failed to match CHAR '%c'\n", r->c);
+                return (NULL);
             }
-            return (NULL);
+            break;
         case REG_CLASS: {
-            // if (*str != '\0' && strchr(r->class, *str)) {
-            //     return (str + 1);
-            // }
             WARN("REG_CLASS matching not implemented yet\n");
             return (NULL);
         }
         case REG_CLASS_NEG: {
             WARN("REG_CLASS_NEG matching not implemented yet\n");
-            // if (*str != '\0' && !strchr(r->class, *str)) {
-            //     return (str + 1);
-            // }
             return (NULL);
         }
         case REG_CONCAT: {
             DBG("Matching CONCAT against '%c'\n", *str);
-            char *next_str = match_regex(r->left, str);
-            if (next_str) {
+            next = match_regex(r->left, str);
+            if (next) {
                 DBG("Matched CONCAT left part\n");
-                return match_regex(r->right, next_str);
+                next = match_regex(r->right, next);
             }
-            return (NULL);
+            break;
         }
         case REG_ALT: {
             DBG("Matching ALT against '%c'\n", *str);
-            char *next_str = match_regex(r->left, str);
-            if (next_str) {
-                DBG("Matched ALT left part\n");
-                return (next_str);
+            next = match_regex(r->left, str);
+            if (!next) {
+                next = match_regex(r->right, str);
             }
-            return match_regex(r->right, str);
+            break;
         }
         case REG_STAR: {
             DBG("Matching STAR against '%c'\n", *str);
-            char *next_str = str;
-            while ((next_str = match_regex(r->left, next_str)) != NULL) {
+            next = str;
+            while ((next = match_regex(r->left, next)) != NULL) {
                 DBG("Matched STAR\n");
-                str = next_str;
+                str = next;
             }
-            return (str);
+            next = str;
+            break;
+
         }
         case REG_PLUS: {
             DBG("Matching PLUS against '%c'\n", *str);
-            char *next_str = match_regex(r->left, str);
-            if (!next_str) return (NULL);
-            str = next_str;
-            while ((next_str = match_regex(r->left, str)) != NULL) {
+            next = match_regex(r->left, str);
+            if (!next) return (NULL);
+            str = next;
+            while ((next = match_regex(r->left, str)) != NULL) {
                 DBG("Matched PLUS\n");
-                str = next_str;
+                str = next;
             }
-            return (str);
+            next = str;
+            break;
+
         }
         case REG_OPTIONAL: {
             DBG("Matching OPTIONAL against '%c'\n", *str);
-            char *next_str = match_regex(r->left, str);
-            if (next_str) {
-                DBG("Matched OPTIONAL\n");
-                return (next_str);
-            }
-            return (str);
+            next = match_regex(r->left, str);
+            next = next ? next : str;
+            break;
+
         }
         default: {
             ERR("Unknown regex node type\n");
             return (NULL);
         }
     }
-    return (NULL);
+    return (next);
 }
 
 int main(int argc, char* argv[]) {
