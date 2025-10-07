@@ -2,8 +2,6 @@ CFLAGS			=	-Wall -Wextra -Werror -O3
 
 OBJ_DIR			=	obj
 
-ALL_SRC_DIR 	=	obj
-
 SRC_DIR 		=	src
 
 MAIN_MANDATORY 	=	main.c
@@ -11,6 +9,8 @@ MAIN_MANDATORY 	=	main.c
 SRCS			=	log.c\
 					regex_tree.c\
 					parse_regex.c\
+					utils/trim.c\
+					utils/split.c\
 
 OBJS 			= $(addprefix $(OBJ_DIR)/, $(SRCS:.c=.o))
 

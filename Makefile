@@ -13,12 +13,9 @@ $(NAME): $(LIBFT) $(LIST) $(OBJ_DIR) $(OBJS)
 	@$(CC) $(CFLAGS) -o $(NAME) $(OBJS) $(LIBFT) $(LIST) -lm
 	@printf "$(GREEN)Compiling $(NAME) done$(RESET)\n"
 
-
-$(OBJ_DIR):
-	@mkdir -p $(ALL_SRC_DIR)
-
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 	@printf "$(YELLOW)Compile $<$(RESET) $(BRIGHT_BLACK)-->$(RESET) $(BRIGHT_MAGENTA)$@$(RESET)\n"
+	@mkdir -p $(dir $@)
 	@$(CC) $(CFLAGS) -o $@ -c $<
 
 

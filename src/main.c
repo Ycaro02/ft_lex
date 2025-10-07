@@ -1,6 +1,46 @@
 #include "../include/log.h"
 #include "../include/regex_tree.h"
 
+typedef struct ClassDef {
+    char charset[1024];
+    s8   reverse_match;
+} ClassDef;
+
+s8 parse_class_exp(char *exp) {
+    ClassDef class_def = { .charset = "", .reverse_match = 0 };
+    int i = 0, j = 0;
+
+    if (exp[i] == '^') {
+        class_def.reverse_match = 1;
+        i++;
+    }
+
+    int exp_len = strlen(exp);
+
+    while (exp[i] != 0) {
+
+        if (i + 2 < exp_len) {
+            if (exp[i + 1] == '-' && exp[i + 2] && exp[i] < exp[i + 2]) {
+                for (char c = exp[i]; c <= exp[i + 2]; c++) {
+                    class_def.charset[j] = c;
+                    j++;
+                }
+                i += 3;
+            }
+        } else {
+            class_def.charset[j] = exp[i];
+            j++;
+            i++;
+
+        }
+    }
+
+    INFO("CHARSET: %s\n", class_def.charset);
+    return (1);
+
+}
+
+
 /**
  * @brief Match the input string against the regex tree
  * @param r The root of the regex tree
@@ -95,6 +135,9 @@ char *match_regex(RegexTreeNode* r, char *str) {
 int main(int argc, char* argv[]) {
     
     set_log_level(L_INFO);
+
+    // (void)argc;
+    // parse_class_exp(argv[1]);
 
     if (argc < 3) {
         INFO("Usage: %s <regex> <str_to_parse>\n", argv[0]);

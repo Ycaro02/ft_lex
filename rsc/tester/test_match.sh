@@ -85,6 +85,7 @@ test_regex "ab|ko" "abbbKO a ko ok KOko"
 # Test alt | and +
 test_regex "ab|ko|0+" "abbbKO a b ab aba 0000 00 0 000"
 
+test_regex ".*" "aXb1 ( aYb aZb a b ab"
 # Test class []
 # test_regex "[abc]+" "abbbKO a b ab aba 0000 00"
 

@@ -2,6 +2,7 @@
 #define STRING_HANDLER_H
 
 #include <stdlib.h>
+#include <string.h>
 
 #define BUFF_SIZE (1024*1024)
 
@@ -45,5 +46,13 @@ INLINE char next(String *s) {
 INLINE int end(String *s) {
     return (s->str[s->pos] == '\0');
 }
+
+
+/* utils/split.c */
+void    free_split(char **split);
+char	**ft_split_trim(char const *str, char c);
+
+/* utils/trim.c */
+char	*ft_strtrim(char const *s1, char const *set);
 
 #endif /* STRING_HANDLER_H */
