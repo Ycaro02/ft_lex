@@ -8,7 +8,9 @@ SRC_DIR 		=	src
 
 MAIN_MANDATORY 	=	main.c
 
-SRCS			=	log.c
+SRCS			=	log.c\
+					regex_tree.c\
+					parse_regex.c\
 
 OBJS 			= $(addprefix $(OBJ_DIR)/, $(SRCS:.c=.o))
 

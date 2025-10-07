@@ -3,6 +3,9 @@
         "*.def": "source.def",
         "log.h": "c",
         "random": "c",
-        "sstream": "c"
+        "sstream": "c",
+        "regex_tree.h": "c",
+        "string": "c",
+        "format": "c"
     }
 }
