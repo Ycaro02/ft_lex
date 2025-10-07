@@ -42,9 +42,9 @@ function test_regex() {
     # log N "Testing regex: '${regex}' with input: '${test_str}'"
 
     local lex_output=$(${LEX} ${LEXER_FILE} "${test_str}")
-    local lex_match=$(echo -e "${lex_output}" | grep "Match Rule" | awk '{print $4}')
+    local lex_match=$(echo -e "${lex_output}" | grep "Match Rule" | awk '{ for (i=4; i<=NF; i++) printf "%s%s", $i, (i<NF ? OFS : ORS) }')
 
-    local ft_lex_match=$(${FT_LEX_TEST} "${regex}" "${test_str}" | grep "Match Rule" | awk '{print $4}')
+    local ft_lex_match=$(${FT_LEX_TEST} "${regex}" "${test_str}" | grep "Match Rule" | awk '{ for (i=4; i<=NF; i++) printf "%s%s", $i, (i<NF ? OFS : ORS) }')
 
     if [[ "${lex_match}" == "${ft_lex_match}" ]]; then
         log I "${OK}: ${BOLD_YELLOW}${regex}${RESET} with input: ${BOLD_PURPLE}${test_str}${RESET}"
@@ -61,31 +61,48 @@ make -s > /dev/null 2>&1
 
 # Basic tests concat
 test_regex "ab" "abbbKO a b ab aba"
+test_regex "abc" "abbbKO a b ab aba abc abca abcb"
+test_regex "abcd" "abbbKO a b ab aba abc abca abcb abcd abcde"
 
 # Basic tests +
 test_regex "ab+" "abbbKO a b ab aba"
+test_regex "a+b" "abbbKO a b ab aba"
+test_regex "a+b+" "abbbKO a b ab aba"
 
 # Test parenthese and +
 test_regex "(ab)+" "abbbKO a b ab aba aabb abbba"
-
+test_regex "(ab)+b" "abbbKO a b ab aba aabb abbba"
+test_regex "ko|(ab)+" "aXb aYb aZb a b ab abbbbb"
 # Test *
 test_regex "a*b" "aXb aYb aZb a b ab"
+test_regex "ab*" "aXb aYb aZb a b ab"
 
 # Test .
 test_regex "." "aXb1 ( aYb aZb a b ab"
 test_regex "a.b" "aXb aYb aZb a b ab"
+test_regex "a.*" "aXb1 ( aYb aZb a b ab"
+
 
 # Test optional ?
 test_regex "ab?" "aXb aYb aZb a b ab"
 test_regex "a?b" "aXb aYb aZb a b ab"
+test_regex "a?b?" "aXb aYb aZb a b ab"
 
 # Test alt |
 test_regex "ab|ko" "abbbKO a ko ok KOko"
+test_regex "(ab|ko)+" "abbbKO a ko ok KOko"
 
 # Test alt | and +
 test_regex "ab|ko|0+" "abbbKO a b ab aba 0000 00 0 000"
+test_regex "(ab|ko|0+)+" "abbbKO a b ab aba 0000 00 0 000"
 
+# Test all matched
 test_regex ".*" "aXb1 ( aYb aZb a b ab"
+
+# hard case
+# test_regex "l?|ab" "al all lll aXb1 ( aYb aZb a b ab b bb bbb ab ab ab"
+# test_regex "a.*b" "aXb1 ( aYb aZb a b ab"
+
 # Test class []
 # test_regex "[abc]+" "abbbKO a b ab aba 0000 00"
 

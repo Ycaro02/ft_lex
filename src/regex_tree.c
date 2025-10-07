@@ -21,6 +21,7 @@ RegexTreeNode* RegexTreeNode_create(RegexType type, RegexTreeNode *left, RegexTr
     node->left = left;
     node->right = right;
     node->class = NULL;
+    node->op = OP_NONE;
     if (str) {
         node->class = malloc(strlen(str) + 1);
         if (!node->class) {
@@ -47,6 +48,27 @@ void RegexTreeNode_free(RegexTreeNode *node) {
 }
 
 
+char *get_operator_string(RegexOperator op) {
+    switch (op) {
+        case OP_NONE: return "NONE";
+        case OP_STAR: return YELLOW"STAR (*)"RESET;
+        case OP_PLUS: return CYAN"PLUS (+)"RESET;
+        case OP_OPTIONAL: return PURPLE"OPTIONAL (?)"RESET;
+        default: return "UNKNOWN";
+    }
+}
+
+char *get_operator_display(RegexOperator op) {
+    static char buff[128];
+
+    bzero(buff, sizeof(buff));
+
+    if (op == OP_NONE) return ("");
+
+    sprintf(buff, ": %s", get_operator_string(op));
+    return (buff);
+}
+
 /**
  * @brief Helper function to print the regex tree
  * @param r The root of the regex tree
@@ -61,28 +83,19 @@ static void print_regex_node(RegexTreeNode* r, char* prefix, int is_last) {
     
     switch (r->type) {
         case REG_CHAR: 
-            printf("CHAR('%c')\n", r->c); 
+            printf("CHAR('%c')%s\n", r->c, get_operator_display(r->op)); 
             break;
         case REG_CONCAT: 
-            printf("CONCAT\n"); 
+            printf("CONCAT%s\n", get_operator_display(r->op)); 
             break;
         case REG_ALT: 
-            printf("ALT (|)\n"); 
-            break;
-        case REG_STAR: 
-            printf("STAR (*)\n"); 
-            break;
-        case REG_PLUS: 
-            printf("PLUS (+)\n"); 
-            break;
-        case REG_OPTIONAL: 
-            printf("OPTIONAL (?)\n"); 
+            printf("ALT (|)%s\n", get_operator_display(r->op)); 
             break;
         case REG_CLASS: 
-            printf("CLASS [%s]\n", r->class ? r->class : ""); 
+            printf("CLASS [%s]%s\n", r->class ? r->class : "", get_operator_display(r->op)); 
             break;
         case REG_CLASS_NEG: 
-            printf("CLASS_NEG [^%s]\n", r->class ? r->class : ""); 
+            printf("CLASS_NEG [^%s]%s\n", r->class ? r->class : "", get_operator_display(r->op)); 
             break;
         default: 
             printf("UNKNOWN\n"); 

@@ -49,11 +49,12 @@ s8 parse_class_exp(char *exp) {
  */
 char *match_regex(RegexTreeNode* r, char *str) {
 
-    // INFO("Scanning '%s'\n", str);
-
-    // set_log_level(L_DEBUG);
-
     char *next = NULL;
+
+    if (!r) return (str); // Empty regex matches empty string
+
+    if (!str) return (NULL); // No string to match against
+
 
     switch (r->type) {
         case REG_CHAR:
@@ -63,7 +64,6 @@ char *match_regex(RegexTreeNode* r, char *str) {
                 next = str + 1;
             } else {
                 DBG("Failed to match CHAR '%c'\n", r->c);
-                return (NULL);
             }
             break;
         case REG_CLASS: {
@@ -91,42 +91,45 @@ char *match_regex(RegexTreeNode* r, char *str) {
             }
             break;
         }
-        case REG_STAR: {
-            DBG("Matching STAR against '%c'\n", *str);
-            next = str;
-            while ((next = match_regex(r->left, next)) != NULL) {
-                DBG("Matched STAR\n");
-                str = next;
-            }
-            next = str;
-            break;
-
-        }
-        case REG_PLUS: {
-            DBG("Matching PLUS against '%c'\n", *str);
-            next = match_regex(r->left, str);
-            if (!next) return (NULL);
-            str = next;
-            while ((next = match_regex(r->left, str)) != NULL) {
-                DBG("Matched PLUS\n");
-                str = next;
-            }
-            next = str;
-            break;
-
-        }
-        case REG_OPTIONAL: {
-            DBG("Matching OPTIONAL against '%c'\n", *str);
-            next = match_regex(r->left, str);
-            next = next ? next : str;
-            break;
-
-        }
         default: {
             ERR("Unknown regex node type\n");
             return (NULL);
         }
     }
+
+    switch (r->op) {
+        case OP_NONE:
+            return (next);
+        case OP_STAR: {
+            char *temp = next;
+            while (temp) {
+                str = temp;
+                temp = match_regex(r, str);
+                if (temp == str) {
+                    return (str); // Prevent infinite loop
+                }
+
+            }
+            return (str);
+        }
+        case OP_PLUS: {
+            if (!next) return (NULL);
+            char *temp = next;
+            while (temp) {
+                str = temp;
+                temp = match_regex(r, str);
+            }
+            return (str);
+        }
+        case OP_OPTIONAL: {
+            DBG("Matching OPTIONAL Str: '%s', r->c = '%c'\n", str, r->c);
+            return (next ? next : str);
+        }
+        
+        default:
+            break;
+    }
+
     return (next);
 }
 
@@ -167,19 +170,32 @@ int main(int argc, char* argv[]) {
     }
     
     char *tmp = input;
+    char *old = NULL;
+    char *res = NULL;
 
     while (tmp && *tmp) {
         DBG("Attempting to match at: '%s'\n", tmp);
         
-        char *old = tmp;
-        char *res = match_regex(tree, tmp);
+        old = tmp;
+        res = match_regex(tree, tmp);
         
+
+
         if (res) {
             int len = res - old;
+
+            if (len <= 0) {
+                WARN("Zero-length match, advancing by one to avoid infinite loop\n");
+                res = old + 1;
+                tmp++;
+                continue;
+            }
+
             char matched[BUFF_SIZE] = {0};
             strncpy(matched, old, len);
-
+            INFO("=====================================\n");
             INFO(PURPLE"Match Rule: %s\n"RESET, matched);
+            INFO("=====================================\n");
             tmp = res;
         } else {
             WARN("No match at: '%s'\n", tmp);

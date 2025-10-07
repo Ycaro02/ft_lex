@@ -64,26 +64,23 @@ static RegexTreeNode* parse_atom(String *s) {
     }
 }
 
-
 /**
  * @brief Parse repetition operators (*, +, ?)
- * @return The root of the repetition subtree
+ * @return The root of the (possibly repeated) atom node
  */
 static RegexTreeNode* parse_repeat(String *s) {
     RegexTreeNode* atom = parse_atom(s);
     char c = peek(s);
 
-    if (c == '*') {
-        next(s);
-        return RegexTreeNode_create(REG_STAR, atom, NULL, NULL, 0);
-    } else if (c == '+') {
-        next(s);
-        return RegexTreeNode_create(REG_PLUS, atom, NULL, NULL, 0);
-    } else if (c == '?') {
-        next(s);
-        return RegexTreeNode_create(REG_OPTIONAL, atom, NULL, NULL, 0);
+    if (c == '*' || c == '+' || c == '?') {
+        next(s); // Consomme le symbole
+        switch (c) {
+            case '*': atom->op = OP_STAR; break;
+            case '+': atom->op = OP_PLUS; break;
+            case '?': atom->op = OP_OPTIONAL; break;
+        }
     }
-    return (atom);
+    return atom;
 }
 
 /**

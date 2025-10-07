@@ -2,7 +2,7 @@ include rsc/mk/color.mk
 include rsc/mk/source.mk
 
 NAME            =   ft_lex
-CC              =   clang
+CC              =   clang -g3
 
 all:        $(NAME)
 
