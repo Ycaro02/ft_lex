@@ -1,17 +1,22 @@
 #!/bin/bash
 
-L_FILE=${1}
+ROOT_DIR=$(pwd)
 
+source ${ROOT_DIR}/rsc/sh/bash_log.sh
+
+L_FILE=${1}
 
 ARGS="${2}"
 
-if [ -z "$L_FILE" ]; then
-    echo "Usage: $0 <flex_file.l>"
+
+if [ -z "${L_FILE}" ]; then
+    log E "Usage: $0 <flex_file> [args_to_lexer]"
     exit 1
 fi
 
-echo "Using flex file: ${L_FILE}"
-echo "With args: ${ARGS}"
+log I "Using flex file: ${L_FILE}"
+
+log I "With args: ${ARGS}"
 
 lex ${L_FILE}
 

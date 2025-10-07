@@ -1,25 +1,26 @@
 #include "../include/log.h"
 
 
+#define BUFF_SIZE (1024*1024)
+
 typedef enum RegexType{
-    REG_CHAR,           // simple char ex: 'a'
-    REG_ANY,            // '.' = any character
-    REG_CLASS,          // [abc] or [a-z]
-    REG_CLASS_NEG,      // [^abc] or [^a-z]
-    REG_CONCAT,         // AB
-    REG_ALT,            // A|B
-    REG_STAR,           // A*
-    REG_PLUS,           // A+
-    REG_OPTIONAL,       // A?
+    REG_CHAR,           /* simple char ex: 'a' */
+    REG_CLASS,          /* [abc] or [a-z] or [0-9] */
+    REG_CLASS_NEG,      /* [^abc] or [^a-z] or [^0-9] */
+    REG_CONCAT,         /* AB */
+    REG_ALT,            /* A|B */
+    REG_STAR,           /* A* */
+    REG_PLUS,           /* A+ */
+    REG_OPTIONAL,       /* A? */
 } RegexType;
 
 
 typedef struct RegexTreeNode_s {
-    RegexType               type;             // type of the node
-    struct RegexTreeNode_s  *left;            // left child
-    struct RegexTreeNode_s  *right;           // right child
-    char                    *str;             // for character classes like [0-9]
-    char                    c;                // for single characters
+    RegexType               type;             /* type of the node */
+    struct RegexTreeNode_s  *left;            /* left child */
+    struct RegexTreeNode_s  *right;           /* right child */
+    char                    *class;           /* for character classes like [0-9] */
+    char                    c;                /* for single characters */
 } RegexTreeNode;
 
 
@@ -85,15 +86,15 @@ RegexTreeNode* RegexTreeNode_create(RegexType type, RegexTreeNode *left, RegexTr
     node->type = type;
     node->left = left;
     node->right = right;
-    node->str = NULL;
+    node->class = NULL;
     if (str) {
-        node->str = malloc(strlen(str) + 1);
-        if (!node->str) {
+        node->class = malloc(strlen(str) + 1);
+        if (!node->class) {
             ERR("Memory allocation failed\n");
             free(node);
             return (NULL);
         }
-        strcpy(node->str, str);
+        strcpy(node->class, str);
     }
     node->c = c;
     return (node);
@@ -107,7 +108,7 @@ void RegexTreeNode_free(RegexTreeNode *node) {
     if (!node) return;
     RegexTreeNode_free(node->left);
     RegexTreeNode_free(node->right);
-    free(node->str);
+    free(node->class);
     free(node);
 }
 
@@ -190,7 +191,6 @@ RegexTreeNode* parse_repeat() {
         next();
         return RegexTreeNode_create(REG_OPTIONAL, atom, NULL, NULL, 0);
     }
-
     return (atom);
 }
 
@@ -235,10 +235,6 @@ RegexTreeNode* parse_alt() {
 RegexTreeNode* parse_regex() {
     if (end()) return (NULL);
 
-    if (len() == 1 && peek() == '.') {
-        return RegexTreeNode_create(REG_ANY, NULL, NULL, NULL, 0);
-    }
-
     return (parse_alt());
 }
 
@@ -275,10 +271,10 @@ void print_regex_tree(RegexTreeNode* r, char* prefix, int is_last) {
             printf("OPTIONAL (?)\n"); 
             break;
         case REG_CLASS: 
-            printf("CLASS [%s]\n", r->str ? r->str : ""); 
+            printf("CLASS [%s]\n", r->class ? r->class : ""); 
             break;
         case REG_CLASS_NEG: 
-            printf("CLASS_NEG [^%s]\n", r->str ? r->str : ""); 
+            printf("CLASS_NEG [^%s]\n", r->class ? r->class : ""); 
             break;
         default: 
             printf("UNKNOWN\n"); 
@@ -319,25 +315,22 @@ void print_regex(RegexTreeNode* r) {
  */
 char *match_regex(RegexTreeNode* r, char *str) {
 
-    INFO("Scanning '%s'\n", str);
+    // INFO("Scanning '%s'\n", str);
 
     switch (r->type) {
         case REG_CHAR:
             DBG("Matching CHAR '%c' against '%c'\n", r->c, *str);
             if (*str == r->c) {
-                INFO("Matched CHAR '%c'\n", r->c);
+                DBG("Matched CHAR '%c'\n", r->c);
                 return (str + 1);
-            }
-            return (NULL);
-        case REG_ANY:
-            DBG("Matching ANY against '%c'\n", *str);
-            if (*str != '\0') {
-                INFO("Matched ANY '%c'\n", *str);
+            } 
+            else if (*str != '\0' && r->c == '.') {
+                DBG("Matched CHAR ANY '%c'\n", *str);
                 return (str + 1);
             }
             return (NULL);
         case REG_CLASS: {
-            // if (*str != '\0' && strchr(r->str, *str)) {
+            // if (*str != '\0' && strchr(r->class, *str)) {
             //     return (str + 1);
             // }
             WARN("REG_CLASS matching not implemented yet\n");
@@ -345,7 +338,7 @@ char *match_regex(RegexTreeNode* r, char *str) {
         }
         case REG_CLASS_NEG: {
             WARN("REG_CLASS_NEG matching not implemented yet\n");
-            // if (*str != '\0' && !strchr(r->str, *str)) {
+            // if (*str != '\0' && !strchr(r->class, *str)) {
             //     return (str + 1);
             // }
             return (NULL);
@@ -354,7 +347,7 @@ char *match_regex(RegexTreeNode* r, char *str) {
             DBG("Matching CONCAT against '%c'\n", *str);
             char *next_str = match_regex(r->left, str);
             if (next_str) {
-                INFO("Matched CONCAT left part\n");
+                DBG("Matched CONCAT left part\n");
                 return match_regex(r->right, next_str);
             }
             return (NULL);
@@ -363,7 +356,7 @@ char *match_regex(RegexTreeNode* r, char *str) {
             DBG("Matching ALT against '%c'\n", *str);
             char *next_str = match_regex(r->left, str);
             if (next_str) {
-                INFO("Matched ALT left part\n");
+                DBG("Matched ALT left part\n");
                 return (next_str);
             }
             return match_regex(r->right, str);
@@ -372,7 +365,7 @@ char *match_regex(RegexTreeNode* r, char *str) {
             DBG("Matching STAR against '%c'\n", *str);
             char *next_str = str;
             while ((next_str = match_regex(r->left, next_str)) != NULL) {
-                INFO("Matched STAR\n");
+                DBG("Matched STAR\n");
                 str = next_str;
             }
             return (str);
@@ -383,7 +376,7 @@ char *match_regex(RegexTreeNode* r, char *str) {
             if (!next_str) return (NULL);
             str = next_str;
             while ((next_str = match_regex(r->left, str)) != NULL) {
-                INFO("Matched PLUS\n");
+                DBG("Matched PLUS\n");
                 str = next_str;
             }
             return (str);
@@ -392,7 +385,7 @@ char *match_regex(RegexTreeNode* r, char *str) {
             DBG("Matching OPTIONAL against '%c'\n", *str);
             char *next_str = match_regex(r->left, str);
             if (next_str) {
-                INFO("Matched OPTIONAL\n");
+                DBG("Matched OPTIONAL\n");
                 return (next_str);
             }
             return (str);
@@ -432,25 +425,29 @@ int main(int argc, char* argv[]) {
         INFO("=====================================\n");
         
     } else {
-        INFO("Failed to parse regex!\n");
+        ERR("Failed to parse regex!\n");
     }
     
     char *tmp = str;
 
     while (tmp && *tmp) {
-        INFO("Attempting to match at: '%s'\n", tmp);
+        DBG("Attempting to match at: '%s'\n", tmp);
         
         char *old = tmp;
         char *res = match_regex(tree, tmp);
         
         if (res) {
-            INFO(PURPLE"Matched up to: '%s'\n"RESET, old);
+            int len = res - old;
+            char matched[BUFF_SIZE] = {0};
+            strncpy(matched, old, len);
+
+            INFO(PURPLE"Match Rule: %s\n"RESET, matched);
             tmp = res;
         } else {
             WARN("No match at: '%s'\n", tmp);
             tmp++;
         }
-        INFO("Continuing match at: '%s'\n", tmp);
+        DBG("Continuing match at: '%s'\n", tmp);
     }
 
     RegexTreeNode_free(tree);

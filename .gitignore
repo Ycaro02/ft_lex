@@ -1,4 +1,6 @@
 ft_lex
+a.out
+test.l
 *.o
 lex.yy
 lex.yy.c
