@@ -133,6 +133,41 @@ char *match_regex(RegexTreeNode* r, char *str) {
     return (next);
 }
 
+void match_regex_by_tree(RegexTreeNode *tree, char *input) {
+    char *tmp = input;
+    char *old = NULL;
+    char *res = NULL;
+
+    while (tmp && *tmp) {
+        DBG("Attempting to match at: '%s'\n", tmp);
+        
+        old = tmp;
+        res = match_regex(tree, tmp);
+        
+
+        if (res) {
+            int len = res - old;
+            if (len <= 0) {
+                WARN("Zero-length match, advancing by one to avoid infinite loop\n");
+                res = old + 1;
+                tmp++;
+                continue;
+            }
+            char matched[BUFF_SIZE] = {0};
+            strncpy(matched, old, len);
+            INFO("=====================================\n");
+            INFO(PURPLE"Match Rule: %s\n"RESET, matched);
+            INFO("=====================================\n");
+            tmp = res;
+        } else {
+            WARN("No match at: '%s'\n", tmp);
+            tmp++;
+        }
+        DBG("Continuing match at: '%s'\n", tmp);
+    }
+
+}
+
 int main(int argc, char* argv[]) {
     
     set_log_level(L_INFO);
@@ -169,41 +204,7 @@ int main(int argc, char* argv[]) {
         ERR("Failed to parse regex!\n");
     }
     
-    char *tmp = input;
-    char *old = NULL;
-    char *res = NULL;
-
-    while (tmp && *tmp) {
-        DBG("Attempting to match at: '%s'\n", tmp);
-        
-        old = tmp;
-        res = match_regex(tree, tmp);
-        
-
-
-        if (res) {
-            int len = res - old;
-
-            if (len <= 0) {
-                WARN("Zero-length match, advancing by one to avoid infinite loop\n");
-                res = old + 1;
-                tmp++;
-                continue;
-            }
-
-            char matched[BUFF_SIZE] = {0};
-            strncpy(matched, old, len);
-            INFO("=====================================\n");
-            INFO(PURPLE"Match Rule: %s\n"RESET, matched);
-            INFO("=====================================\n");
-            tmp = res;
-        } else {
-            WARN("No match at: '%s'\n", tmp);
-            tmp++;
-        }
-        DBG("Continuing match at: '%s'\n", tmp);
-    }
-
+    match_regex_by_tree(tree, input);
     RegexTreeNode_free(tree);
 
     return (0);

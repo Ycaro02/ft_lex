@@ -6,6 +6,7 @@
         "sstream": "c",
         "regex_tree.h": "c",
         "string": "c",
-        "format": "c"
+        "format": "c",
+        "nfa.h": "c"
     }
 }
