@@ -13,7 +13,6 @@ typedef enum RegexOperator {
 typedef enum RegexType{
     REG_CHAR,           /* simple char ex: 'a' */
     REG_CLASS,          /* [abc] or [t%0-2^&(a-z] or [0-9] */
-    REG_CLASS_NEG,      /* [^abc] or [^a-z] or [^0-9] */
     REG_CONCAT,         /* AB */
     REG_ALT,            /* A|B */
 } RegexType;

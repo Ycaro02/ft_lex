@@ -55,52 +55,64 @@ function test_regex() {
 
 make -s > /dev/null 2>&1
 
-# Basic tests concat
-test_regex "ab" "abbbKO a b ab aba"
-test_regex "abc" "abbbKO a b ab aba abc abca abcb"
-test_regex "abcd" "abbbKO a b ab aba abc abca abcb abcd abcde"
+function full_test() {
+    # Basic tests concat
+    test_regex "ab" "abbbKO a b ab aba"
+    test_regex "abc" "abbbKO a b ab aba abc abca abcb"
+    test_regex "abcd" "abbbKO a b ab aba abc abca abcb abcd abcde"
 
-# Basic tests +
-test_regex "ab+" "abbbKO a b ab aba"
-test_regex "a+b" "abbbKO a b ab aba"
-test_regex "a+b+" "abbbKO a b ab aba"
+    # Basic tests +
+    test_regex "ab+" "abbbKO a b ab aba"
+    test_regex "a+b" "abbbKO a b ab aba"
+    test_regex "a+b+" "abbbKO a b ab aba"
 
-# Test parenthese and +
-test_regex "(ab)+" "abbbKO a b ab aba aabb abbba"
-test_regex "(ab)+b" "abbbKO a b ab aba aabb abbba"
-test_regex "ko|(ab)+" "aXb aYb aZb a b ab abbbbb"
-# Test *
-test_regex "a*b" "aXb aYb aZb a b ab"
-test_regex "ab*" "aXb aYb aZb a b ab"
+    # Test parenthese and +
+    test_regex "(ab)+" "abbbKO a b ab aba aabb abbba"
+    test_regex "(ab)+b" "abbbKO a b ab aba aabb abbba"
+    test_regex "ko|(ab)+" "aXb aYb aZb a b ab abbbbb"
+    # Test *
+    test_regex "a*b" "aXb aYb aZb a b ab"
+    test_regex "ab*" "aXb aYb aZb a b ab"
 
-# Test .
-test_regex "." "aXb1 ( aYb aZb a b ab"
-test_regex "a.b" "aXb aYb aZb a b ab"
-test_regex "a.*" "aXb1 ( aYb aZb a b ab"
+    # Test .
+    test_regex "." "aXb1 ( aYb aZb a b ab"
+    test_regex "a.b" "aXb aYb aZb a b ab"
+    test_regex "a.*" "aXb1 ( aYb aZb a b ab"
 
 
-# Test optional ?
-test_regex "ab?" "aXb aYb aZb a b ab"
-test_regex "a?b" "aXb aYb aZb a b ab"
-test_regex "a?b?" "aXb aYb aZb a b ab"
+    # Test optional ?
+    test_regex "ab?" "aXb aYb aZb a b ab"
+    test_regex "a?b" "aXb aYb aZb a b ab"
+    test_regex "a?b?" "aXb aYb aZb a b ab"
 
-# Test alt |
-test_regex "ab|ko" "abbbKO a ko ok KOko"
-test_regex "(ab|ko)+" "abbbKO a ko ok KOko"
+    # Test alt |
+    test_regex "ab|ko" "abbbKO a ko ok KOko"
+    test_regex "(ab|ko)+" "abbbKO a ko ok KOko"
 
-# Test alt | and +
-test_regex "ab|ko|0+" "abbbKO a b ab aba 0000 00 0 000"
-test_regex "(ab|ko|0+)+" "abbbKO a b ab aba 0000 00 0 000"
+    # Test alt | and +
+    test_regex "ab|ko|0+" "abbbKO a b ab aba 0000 00 0 000"
+    test_regex "(ab|ko|0+)+" "abbbKO a b ab aba 0000 00 0 000"
 
-# Test all matched
-test_regex ".*" "aXb1 ( aYb aZb a b ab"
+    # Test all matched
+    test_regex ".*" "aXb1 ( aYb aZb a b ab"
 
-# hard case
-# test_regex "l?|ab" "al all lll aXb1 ( aYb aZb a b ab b bb bbb ab ab ab"
-# test_regex "a.*b" "aXb1 ( aYb aZb a b ab"
+    # hard case
+    # test_regex "l?|ab" "al all lll aXb1 ( aYb aZb a b ab b bb bbb ab ab ab"
+    # test_regex "a.*b" "aXb1 ( aYb aZb a b ab"
 
-# Test class []
-# test_regex "[abc]+" "abbbKO a b ab aba 0000 00"
+    # Test class []
+    # test_regex "[abc]+" "abbbKO a b ab aba 0000 00"
+}
+
+function no_op_test {
+    test_regex "ab" "aXb aYb aZb a b ab"
+    test_regex "ab|ko" "aXkob aYb aZb a b ab adbabkoskkpokkod"
+    test_regex "aZb|ab|ko" "aXkob aYb aZb a b ab adbabkoskkpokkod"
+    test_regex "abcd|ab" "aXkob abcdasYb aZb a b ab adbabkoskkpokkod"
+    test_regex "ab|abcd" "aXkabcdaboab abcdasYb aZbabcd a b ab adbabkoskkpokkod"
+}
+
+no_op_test
 
 
 rm -f ${LEXER_FILE}

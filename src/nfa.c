@@ -1,6 +1,5 @@
-#include "../include/nfa.h"
 #include "../include/log.h"
-
+#include "../include/nfa.h"
 
 /* Create an empty state set */
 StateSet *create_state_set(int capacity) {
@@ -138,13 +137,201 @@ void print_transition(Transition* t) {
     }
 }
 
+void print_nfa_state(NFAState* s) {
+    if (!s) { return; }
+    printf("State s%d%s:", s->id, s->is_final ? " [FINAL]" : "");
+    Transition* t = s->transitions;
+    while(t) {
+        print_transition(t);
+        t = t->next;
+    }
+    printf("\n");
+}
+
 /* Debug function to print states in the set */
-void print_states(const char* msg, StateSet* set) {
+void print_states_set(const char* msg, StateSet* set) {
     DBG("%s:", msg);
     for(int i=0;i<set->count;i++) {
         printf("s%d", set->states[i]->id);
         print_transition(set->states[i]->transitions);
+        if (set->states[i]->is_final) {
+            printf(" [FINAL]");
+        }
         if(i<set->count-1) printf("\n");
     }
     printf("\n");
+}
+
+NFAFragment thompson_from_tree(RegexTreeNode *node) {
+    if (!node) {
+        ERR("Null regex node!\n");
+        return (NFAFragment){0};
+    }
+
+    switch (node->type) {
+
+        case REG_CHAR: {
+            NFAState *s = create_state(g_state_id++, 0);
+            NFAState *e = create_state(g_state_id++, 0);
+            add_transition(s, node->c, e);
+
+
+            StateSet *out = create_state_set(DEFAULT_CAPACITY);
+            out = add_state(out, e);
+
+            DBG("Created CHAR fragment '%c' (%d → %d)\n", node->c, s->id, e->id);
+            return (NFAFragment){ .start = s, .out = out };
+        }
+
+        case REG_CONCAT: {
+            NFAFragment left = thompson_from_tree(node->left);
+            NFAFragment right = thompson_from_tree(node->right);
+
+            // Patch left’s dangling outputs → start of right
+            for (int i = 0; i < left.out->count; i++) {
+                add_transition(left.out->states[i], 0, right.start); // epsilon
+            }
+
+            free_state_set(left.out);
+            DBG("Concatenated fragments (%d → %d)\n", left.start->id, right.start->id);
+            return (NFAFragment){ .start = left.start, .out = right.out };
+        }
+
+        case REG_ALT: {
+            NFAFragment left = thompson_from_tree(node->left);
+            NFAFragment right = thompson_from_tree(node->right);
+
+            NFAState *start = create_state(g_state_id++, 0);
+            add_transition(start, 0, left.start);
+            add_transition(start, 0, right.start);
+
+            // Merge outputs
+            StateSet *out = create_state_set(DEFAULT_CAPACITY + left.out->count + right.out->count);
+            for (int i = 0; i < left.out->count; i++)
+                out = add_state(out, left.out->states[i]);
+            for (int i = 0; i < right.out->count; i++)
+                out = add_state(out, right.out->states[i]);
+
+            free_state_set(left.out);
+            free_state_set(right.out);
+
+            DBG("Created ALT fragment (%d → {%d, %d})\n", start->id, left.start->id, right.start->id);
+            return (NFAFragment){ .start = start, .out = out };
+        }
+
+        default:
+            ERR("Unsupported regex node type: %d\n", node->type);
+            return (NFAFragment){0};
+    }
+}
+
+
+
+char *match_nfa(NFAState* start, char* input) {
+    StateSet *current = create_state_set(DEFAULT_CAPACITY);
+    current = add_state(current, start);
+    current = epsilon_skip(current);
+    // print_states_set("Initial states", current);
+
+    char* ptr = input;
+    char* last_accept = NULL;
+    /* Check if the initial state set contains a final state (for zero-length match) */
+    for (int i = 0; i < current->count; ++i) {
+        if (current->states[i]->is_final) {
+            last_accept = ptr; // match vide accepté à la position de départ
+            DBG("Initial set contains final state: s%d (zero-length match)", current->states[i]->id);
+            break;
+        }
+    }
+
+    while (*ptr) {
+        DBG("Scanning char '%c', remaining: '%s'", *ptr, ptr);
+
+        StateSet *next = create_state_set(DEFAULT_CAPACITY);
+
+        for (int i = 0; i < current->count; i++) {
+            NFAState* s = current->states[i];
+            Transition* t = s->transitions;
+            while (t) {
+                if (t->c == '.' || t->c == *ptr) {
+                    next = add_state(next, t->to);
+                    DBG("s%d --'%c'--> s%d", s->id, t->c == '.' ? '.' : t->c, t->to->id);
+                }
+                t = t->next;
+            }
+        }
+
+        next = epsilon_skip(next);
+        // print_states_set("Next states after epsilon closure", next);
+
+        if (next->count == 0) {
+            
+            /* If there's no reachable state, stop scanning and return based on last_accept. */
+
+            DBG("No states reachable on '%c' — stopping scan, returning based on last_accept", *ptr);
+            free_state_set(next);
+            break;
+        }
+
+        for (int i = 0; i < next->count; ++i) {
+            if (next->states[i]->is_final) {
+                last_accept = ptr + 1; // position après le caractère courant
+                INFO("Found accepting state s%d at position offset %ld", next->states[i]->id, (long)(last_accept - input));
+                break;
+            }
+        }
+
+        free_state_set(current);
+        current = next;
+        ptr++;
+    }
+
+    /* If we've exited the loop because we've read all the input,
+         check if the current set contains a final state. */
+    if (ptr && *ptr == '\0') {
+        for (int i = 0; i < current->count; ++i) {
+            if (current->states[i]->is_final) {
+                last_accept = ptr; // position à la fin de l'input
+                INFO("Reached final state at end: s%d", current->states[i]->id);
+                break;
+            }
+        }
+    }
+
+    free_state_set(current);
+
+    if (last_accept) {
+        char matched[1024] = {};
+        int match_len = last_accept - input;
+        strncpy(matched, input, match_len);
+        // INFO(PURPLE"Match found: matched %ld chars %s"RESET, (long)match_len, matched);
+        INFO(PURPLE"Match Rule: %s\n"RESET, matched);
+
+        return (input + match_len);
+    }
+
+    DBG("No match (no accepting prefix)");
+    return NULL;
+}
+
+void match_nfa_anywhere(NFAState* start, char* input) {
+    // for (const char *p = input; *p; p++) {
+    //     INFO("Trying match at position: '%s'", p);
+    //     char *match = match_nfa(start, p);
+    //     if (match) {
+    //         INFO("✅ Match found");
+    //     }
+    // }
+    char *p = input;
+    while (*p) {
+        DBG("Trying match at position: '%s'", p);
+        char *match = match_nfa(start, p);
+        if (match) {
+            INFO("✅ Match found");
+            p = match;
+        } else {
+            p++;
+        }
+    }
+
 }

@@ -1,5 +1,5 @@
 #include "../include/log.h"
-#include "../include/regex_tree.h"
+#include "../include/nfa.h"
 
 // typedef struct ClassDef {
 //     char charset[1024];
@@ -41,6 +41,12 @@
 // }
 
 
+/* Global state ID counter */
+int *get_state_id_counter() {
+    static int state_id = 0;
+    return (&state_id);
+}
+
 /**
  * @brief Match the input string against the regex tree
  * @param r The root of the regex tree
@@ -68,10 +74,6 @@ char *match_regex(RegexTreeNode* r, char *str) {
             break;
         case REG_CLASS: {
             WARN("REG_CLASS matching not implemented yet\n");
-            return (NULL);
-        }
-        case REG_CLASS_NEG: {
-            WARN("REG_CLASS_NEG matching not implemented yet\n");
             return (NULL);
         }
         case REG_CONCAT: {
@@ -160,7 +162,7 @@ void match_regex_by_tree(RegexTreeNode *tree, char *input) {
             INFO("=====================================\n");
             tmp = res;
         } else {
-            WARN("No match at: '%s'\n", tmp);
+            DBG("No match at: '%s'\n", tmp);
             tmp++;
         }
         DBG("Continuing match at: '%s'\n", tmp);
@@ -203,8 +205,28 @@ int main(int argc, char* argv[]) {
     } else {
         ERR("Failed to parse regex!\n");
     }
+
+    (void)input;
+
+    // set_log_level(L_DEBUG);
+    NFAFragment frag = thompson_from_tree(tree);
     
-    match_regex_by_tree(tree, input);
+    // print_nfa_state(frag.start);
+    
+    // Create unique global final state
+    NFAState *final = create_state(g_state_id++, 1); // mark as final
+
+    // Connect all outputs to this final state
+    for (int i = 0; i < frag.out->count; i++) {
+        add_transition(frag.out->states[i], 0, final); // ε transition
+        DBG("Connecting state s%d to final state s%d\n", frag.out->states[i]->id, final->id);
+        // print_nfa_state(frag.out->states[i]);
+    }
+
+    // print_states_set("Fragment output states", frag.out);
+
+    match_nfa_anywhere(frag.start, input);
+    // match_regex_by_tree(tree, input);
     RegexTreeNode_free(tree);
 
     return (0);

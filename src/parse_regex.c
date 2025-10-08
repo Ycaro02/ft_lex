@@ -9,11 +9,6 @@
 static RegexTreeNode* parse_class(String *s) {
     if (peek(s) == '[') {
         next(s); // skip '['
-        int neg = 0;
-        if (peek(s) == '^') {
-            neg = 1;
-            next(s); // skip '^'
-        }
 
         char buffer[256] = {0};
         int idx = 0;
@@ -30,11 +25,7 @@ static RegexTreeNode* parse_class(String *s) {
 
         if (peek(s) == ']') next(s); // skip ']'
 
-        if (neg) {
-            return RegexTreeNode_create(REG_CLASS_NEG, NULL, NULL, buffer, 0);
-        } else {
-            return RegexTreeNode_create(REG_CLASS, NULL, NULL, buffer, 0);
-        }
+        return RegexTreeNode_create(REG_CLASS, NULL, NULL, buffer, 0);
     }
 
     return (NULL);

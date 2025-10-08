@@ -9,6 +9,7 @@ MAIN_MANDATORY 	=	main.c
 SRCS			=	log.c\
 					regex_tree.c\
 					parse_regex.c\
+					nfa.c\
 					utils/trim.c\
 					utils/split.c\
 

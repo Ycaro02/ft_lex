@@ -94,9 +94,6 @@ static void print_regex_node(RegexTreeNode* r, char* prefix, int is_last) {
         case REG_CLASS: 
             printf("CLASS [%s]%s\n", r->class ? r->class : "", get_operator_display(r->op)); 
             break;
-        case REG_CLASS_NEG: 
-            printf("CLASS_NEG [^%s]%s\n", r->class ? r->class : "", get_operator_display(r->op)); 
-            break;
         default: 
             printf("UNKNOWN\n"); 
             break;

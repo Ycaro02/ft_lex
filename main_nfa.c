@@ -5,59 +5,6 @@
 #include "include/nfa.h"
 #include "include/log.h"
 
-
-bool match_nfa(NFAState* start, const char* input) {
-    StateSet *current = create_state_set(DEFAULT_CAPACITY);
-    current = add_state(current, start);
-    current = epsilon_skip(current);
-    print_states("Initial states", current);
-
-    const char* ptr = input;
-    while(*ptr) {
-        INFO("Scanning char '%c', remaining: '%s'", *ptr, ptr);
-        StateSet *next = create_state_set(DEFAULT_CAPACITY);
-
-        for(int i=0;i<current->count;i++) {
-            NFAState* s = current->states[i];
-            Transition* t = s->transitions;
-            while(t) {
-                if(t->c == '.' || t->c == *ptr) {
-                    next = add_state(next, t->to);
-                    DBG("s%d --'%c'--> s%d", s->id, t->c=='.'?'.':t->c, t->to->id);
-                }
-                t = t->next;
-            }
-        }
-
-        next = epsilon_skip(next);
-        print_states("Next states after epsilon closure", next);
-
-        if(next->count==0) {
-            WARN("No states reachable on '%c'", *ptr);
-            free_state_set(current);
-            free_state_set(next);
-            return false;
-        }
-
-        free_state_set(current);
-        current = next;
-        ptr++;
-    }
-
-    /* Check for final states */
-    for(int i=0;i<current->count;i++) {
-        if(current->states[i]->is_final) {
-            INFO("Reached final state: s%d", current->states[i]->id);
-            free_state_set(current);
-            return true;
-        }
-    }
-
-    WARN("Did not reach any final state");
-    free_state_set(current);
-    return false;
-}
-
 // -------------------- Main --------------------
 int main(int argc, char **argv) {
 
@@ -79,7 +26,7 @@ int main(int argc, char **argv) {
     add_transition(s3,0,s4);     // S3 -- epsilon --> S4
     add_transition(s4,'b',s5);   // S4 -- 'b' --> S5 (FINAL)
 
-    print_states("NFA States from s0", &(StateSet){ .states = (NFAState*[]){s0,s1,s2,s3,s4,s5}, .count=6 });
+    print_states_set("NFA States from s0", &(StateSet){ .states = (NFAState*[]){s0,s1,s2,s3,s4,s5}, .count=6 });
 
     char **input_array = argv;
 
@@ -99,3 +46,5 @@ int main(int argc, char **argv) {
 
     return 0;
 }
+
+

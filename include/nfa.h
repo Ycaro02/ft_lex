@@ -1,6 +1,10 @@
 #ifndef NFA_IMPLEMENTATION_H
 #define NFA_IMPLEMENTATION_H
 
+#include <stdbool.h>
+#include "regex_tree.h"
+#include "log.h"
+
 #define DEFAULT_CAPACITY 32
 
 typedef struct NFAState NFAState;
@@ -23,6 +27,19 @@ typedef struct StateSet {
     int         capacity;           /* Capacity of the state array */
 } StateSet;
 
+typedef struct NFAFragment {
+    NFAState    *start;     /* Start state */
+    StateSet    *out;       /* Out state to link */
+} NFAFragment;
+
+
+
+
+int *get_state_id_counter();
+#define g_state_id (*get_state_id_counter())
+
+
+
 StateSet    *create_state_set(int capacity);
 void        free_state_set(StateSet *set);
 NFAState    *create_state(int id, int is_final);
@@ -31,7 +48,12 @@ void        add_transition(NFAState *from, char c, NFAState *to);
 StateSet    *add_state(StateSet *set, NFAState *s);
 StateSet    *epsilon_skip(StateSet *set);
 
+
+NFAFragment thompson_from_tree(RegexTreeNode *node);
+char *match_nfa(NFAState* start, char* input);
+void        match_nfa_anywhere(NFAState* start, char* input);
 /* Debug function */
-void        print_states(const char* msg, StateSet* set);
+void        print_states_set(const char* msg, StateSet* set);
+void        print_nfa_state(NFAState* s);
 
 #endif /* NFA_IMPLEMENTATION_H */
