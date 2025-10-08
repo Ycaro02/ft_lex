@@ -5,53 +5,59 @@
 #include "regex_tree.h"
 #include "log.h"
 
-#define DEFAULT_CAPACITY 32
 
-typedef struct NFAState NFAState;
+/* Initial capacity for the NFA states array */
+#define DEFAULT_NFA_CAPACITY 64
+/* Initial capacity for the transitions array in each state */
+#define INITIAL_TRANSITIONS_CAPACITY 8
 
-typedef struct Transition {
-    char                c;          /* Char to match, 0 for epsilon */
-    NFAState            *to;        /* Target state */
-    struct Transition   *next;      /* Next transition in linked list */
+/**
+ * @brief Represents a transition from one state to another
+ * 
+ * A transition is triggered by a specific character or epsilon (0).
+ */
+typedef struct {
+    char    c;          // Character to match (0 for epsilon transition)
+    int     to_id;      // ID of the destination state
 } Transition;
 
-struct NFAState {
-    int         id;                 /* State ID */
-    int         is_final;           /* Is final state? */
-    Transition  *transitions;       /* List of transitions */
-};
+/**
+ * @brief Represents a state in the NFA
+ * 
+ * Each state has a unique ID, can be final, and contains a dynamic
+ * array of transitions that automatically grows when needed.
+ */
+typedef struct {
+    int         id;
+    int         is_final;
+    Transition  *trans;         // Dynamic array of transitions
+    int         trans_count;    // Current number of transitions
+    int         trans_capacity; // Current capacity of the transitions array
+} NFAState;
 
-typedef struct StateSet {
-    NFAState    **states;           /* Array of states */
-    int         count;              /* Number of states */
-    int         capacity;           /* Capacity of the state array */
-} StateSet;
+/**
+ * @brief Represents the complete NFA
+ * 
+ * Contains all states in a dynamic array and tracks the start state.
+ */
+typedef struct {
+    NFAState    *states;        // Array of all NFA states
+    int         state_count;    // Current number of states
+    int         capacity;       // Current capacity of the states array
+    int         start_id;       // ID of the start state
+} NFA;
 
-typedef struct NFAFragment {
-    NFAState    *start;     /* Start state */
-    StateSet    *out;       /* Out state to link */
+/**
+ * @brief Represents a fragment of an NFA during Thompson construction
+ * 
+ * Used during the Thompson construction algorithm to build the NFA
+ * incrementally. Each fragment has a start state and multiple output states.
+ */
+typedef struct {
+    int     start_id;           // ID of the fragment's start state
+    int     *out_ids;           // IDs of the fragment's output states
+    int     out_count;          // Number of output states
+    int     out_capacity;       // Capacity of the out_ids array
 } NFAFragment;
-
-int *get_state_id_counter();
-#define g_state_id (*get_state_id_counter())
-
-
-
-StateSet    *create_state_set(int capacity);
-void        free_state_set(StateSet *set);
-NFAState    *create_state(int id, int is_final);
-void        free_state(NFAState *s);
-void        add_transition(NFAState *from, char c, NFAState *to);
-StateSet    *add_state(StateSet *set, NFAState *s);
-StateSet    *epsilon_skip(StateSet *set);
-
-
-NFAFragment thompson_from_tree(RegexTreeNode *node);
-char *match_nfa(NFAState* start, char* input);
-void        match_nfa_anywhere(NFAState* start, char* input);
-/* Debug function */
-void        print_states_set(const char* msg, StateSet* set);
-void        print_nfa_state(NFAState* s);
-void print_nfa_fragment(const char* msg, NFAFragment* frag);
 
 #endif /* NFA_IMPLEMENTATION_H */
