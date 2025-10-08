@@ -170,6 +170,96 @@ void match_regex_by_tree(RegexTreeNode *tree, char *input) {
 
 }
 
+void print_nfa_tree_recursive(NFAState* s, char* prefix, int is_last, int *visited, int* visited_count) {
+    if (!s) return;
+
+    for (int i = 0; i < *visited_count; i++) {
+        if (visited[i] == s->id) return;
+    }
+    visited[(*visited_count)++] = s->id;
+
+    printf("%s", prefix);
+    if (is_last) {
+        printf("└── ");
+        strcat(prefix, "    ");
+    } else {
+        printf("├── ");
+        strcat(prefix, "│   ");
+    }
+
+    printf("State s%d%s\n", s->id, s->is_final ? " [FINAL]" : "");
+
+    int count = 0;
+    Transition* t = s->transitions;
+    while(t) { count++; t = t->next; }
+
+    int idx = 0;
+    t = s->transitions;
+    while(t) {
+        idx++;
+        char buf[64];
+        if(t->c == 0) snprintf(buf, sizeof(buf), "ε");
+        else snprintf(buf, sizeof(buf), "'%c'", t->c);
+
+        printf("%s", prefix);
+        if (idx == count) printf("└── ");
+        else printf("├── ");
+        printf("--%s--> s%d\n", buf, t->to->id);
+
+        char *new_prefix = calloc(strlen(prefix) + 32, sizeof(char));
+        strcpy(new_prefix, prefix);
+        print_nfa_tree_recursive(t->to, new_prefix, idx == count, visited, visited_count);
+        free(new_prefix);
+
+        t = t->next;
+    }
+}
+
+#define MAX_STATE_ID 1024
+
+u64 ptr_array[1024] = {0};
+u32 ptr_idx = 0;
+
+void free_nfa_recursive(NFAState* s, int visited[]) {
+    if (!s) return;
+
+
+    DBG("Freeing state s%d sp:%p, tp:%p\n", s->id, s, s->transitions);
+
+    if (visited[s->id]) return; // déjà visité
+    visited[s->id] = 1;
+
+
+
+    Transition* t = s->transitions;
+    while(t) {
+        free_nfa_recursive(t->to, visited);
+        Transition* next = t->next;
+        free(t);
+        t = next;
+    }
+
+    ptr_array[ptr_idx++] = (u64)s;
+}
+
+void free_nfa(NFAState* start) {
+    int visited[MAX_STATE_ID] = {0};
+    free_nfa_recursive(start, visited);
+
+    for (u32 i = 0; i < ptr_idx; i++) {
+        free((void*)ptr_array[i]);
+    }
+}
+
+void print_nfa_tree(NFAState* start) {
+    int visited[2048] = {0};
+    char prefix[2048] = {0};
+    int visited_count = 0;
+    printf("NFA Tree:\n");
+    print_nfa_tree_recursive(start, prefix, 1, visited, &visited_count);
+    printf("\n");
+}
+
 int main(int argc, char* argv[]) {
     
     set_log_level(L_INFO);
@@ -211,7 +301,6 @@ int main(int argc, char* argv[]) {
     // set_log_level(L_DEBUG);
     NFAFragment frag = thompson_from_tree(tree);
     
-    // print_nfa_state(frag.start);
     
     // Create unique global final state
     NFAState *final = create_state(g_state_id++, 1); // mark as final
@@ -220,12 +309,16 @@ int main(int argc, char* argv[]) {
     for (int i = 0; i < frag.out->count; i++) {
         add_transition(frag.out->states[i], 0, final); // ε transition
         DBG("Connecting state s%d to final state s%d\n", frag.out->states[i]->id, final->id);
-        // print_nfa_state(frag.out->states[i]);
     }
 
-    // print_states_set("Fragment output states", frag.out);
 
+    // print_nfa_fragment("Final NFA Fragment", &frag);
+    print_nfa_tree(frag.start);
     match_nfa_anywhere(frag.start, input);
+
+    free_nfa(frag.start);
+    free_state_set(frag.out);
+
     // match_regex_by_tree(tree, input);
     RegexTreeNode_free(tree);
 

@@ -4,14 +4,19 @@
 /* Create an empty state set */
 StateSet *create_state_set(int capacity) {
     StateSet *set = malloc(sizeof(StateSet));
-    set->states = malloc(capacity * sizeof(NFAState*));
+    set->states = calloc(capacity, sizeof(NFAState*));
     set->count = 0;
     set->capacity = capacity;
-    return set;
+    return (set);
 }
 
 /* Free a state set */
 void free_state_set(StateSet *set) {
+    // for (int i = 0; i < set->capacity; i++) {
+    //     if (set->states[i] != NULL) {
+    //         free(set->states[i]);
+    //     }
+    // }
     free(set->states);
     free(set);
 }
@@ -50,7 +55,7 @@ StateSet *grow_state_set(StateSet *set) {
  * @return Allocated pointer to the created state
  */
 NFAState* create_state(int id, int is_final) {
-    NFAState* s = malloc(sizeof(NFAState));
+    NFAState* s = calloc(1, sizeof(NFAState));
     s->id = id;
     s->is_final = is_final;
     s->transitions = NULL;
@@ -162,195 +167,164 @@ void print_states_set(const char* msg, StateSet* set) {
     printf("\n");
 }
 
-// NFAFragment thompson_from_tree(RegexTreeNode *node) {
-//     if (!node) {
-//         ERR("Null regex node!\n");
-//         return (NFAFragment){0};
-//     }
+void print_nfa_fragment(const char* msg, NFAFragment* frag) {
+    DBG("%s: start=s%d, out_count=%d", msg, frag->start->id, frag->out->count);
+    printf("Start state:\n");
+    print_nfa_state(frag->start);
+    printf("Out states set:\n");
+    print_states_set("Out states", frag->out);
+}
 
-//     switch (node->type) {
+NFAFragment nfa_frag_create(NFAState *start, StateSet *out) {
+    return (NFAFragment){ .start = start, .out = out };
+}
 
-//         case REG_CHAR: {
-//             NFAState *s = create_state(g_state_id++, 0);
-//             NFAState *e = create_state(g_state_id++, 0);
-//             add_transition(s, node->c, e);
+void nfa_char_case(RegexTreeNode *node, NFAFragment *frag) {
+    NFAState *s = create_state(g_state_id++, 0);
+    NFAState *e = create_state(g_state_id++, 0);
+    add_transition(s, node->c, e);
+
+    StateSet *out = create_state_set(DEFAULT_CAPACITY);
+    out = add_state(out, e);
+
+    *frag = nfa_frag_create(s, out);
+    DBG("Created CHAR fragment '%c' (%d → %d)\n", node->c, s->id, e->id);
+}
+
+void nfa_concat_case(RegexTreeNode *node, NFAFragment *frag) {
+    NFAFragment left = thompson_from_tree(node->left);
+    NFAFragment right = thompson_from_tree(node->right);
+
+    for (int i = 0; i < left.out->count; i++) {
+        add_transition(left.out->states[i], 0, right.start);
+    }
+
+    free_state_set(left.out);
+    *frag = nfa_frag_create(left.start, right.out);
+    DBG("Concatenated fragments (%d → %d)\n", left.start->id, right.start->id);
+}
+
+void nfa_alt_case(RegexTreeNode *node, NFAFragment *frag) {
+    NFAFragment left = thompson_from_tree(node->left);
+    NFAFragment right = thompson_from_tree(node->right);
+
+    NFAState *start = create_state(g_state_id++, 0);
+    add_transition(start, 0, left.start);
+    add_transition(start, 0, right.start);
+
+    StateSet *out = create_state_set(DEFAULT_CAPACITY + left.out->count + right.out->count);
+    for (int i = 0; i < left.out->count; i++) {
+        out = add_state(out, left.out->states[i]);
+    }
+    for (int i = 0; i < right.out->count; i++) {
+        out = add_state(out, right.out->states[i]);
+    }
+
+    free_state_set(left.out);
+    free_state_set(right.out);
+
+    *frag = nfa_frag_create(start, out);
+    DBG("Created ALT fragment (%d → {%d, %d})\n", start->id, left.start->id, right.start->id);
+}
 
 
-//             StateSet *out = create_state_set(DEFAULT_CAPACITY);
-//             out = add_state(out, e);
+void nfa_op_star_case(NFAFragment *frag) {
+    NFAState *start = create_state(g_state_id++, 0);
+    NFAState *end   = create_state(g_state_id++, 0);
 
-//             DBG("Created CHAR fragment '%c' (%d → %d)\n", node->c, s->id, e->id);
-//             return (NFAFragment){ .start = s, .out = out };
-//         }
+    add_transition(start, 0, frag->start); // epsilon to fragment start
+    add_transition(start, 0, end);        // epsilon to exit
 
-//         case REG_CONCAT: {
-//             NFAFragment left = thompson_from_tree(node->left);
-//             NFAFragment right = thompson_from_tree(node->right);
+    for (int i = 0; i < frag->out->count; i++) {
+        add_transition(frag->out->states[i], 0, frag->start); // loop
+    }
+    for (int i = 0; i < frag->out->count; i++) {
+        add_transition(frag->out->states[i], 0, end);         // exit
+    }
 
-//             // Patch left’s dangling outputs → start of right
-//             for (int i = 0; i < left.out->count; i++) {
-//                 add_transition(left.out->states[i], 0, right.start); // epsilon
-//             }
+    free_state_set(frag->out);
 
-//             free_state_set(left.out);
-//             DBG("Concatenated fragments (%d → %d)\n", left.start->id, right.start->id);
-//             return (NFAFragment){ .start = left.start, .out = right.out };
-//         }
+    StateSet *out = create_state_set(DEFAULT_CAPACITY);
+    out = add_state(out, end);
+    *frag = nfa_frag_create(start, out);
+    DBG("Applied STAR operator (%d → %d)\n", start->id, end->id);
+}
 
-//         case REG_ALT: {
-//             NFAFragment left = thompson_from_tree(node->left);
-//             NFAFragment right = thompson_from_tree(node->right);
+void nfa_op_plus_case(NFAFragment *frag) {
+    NFAState *end = create_state(g_state_id++, 0);
 
-//             NFAState *start = create_state(g_state_id++, 0);
-//             add_transition(start, 0, left.start);
-//             add_transition(start, 0, right.start);
+    for (int i = 0; i < frag->out->count; i++) {
+        add_transition(frag->out->states[i], 0, frag->start); // loop
+    }
+    for (int i = 0; i < frag->out->count; i++) {
+        add_transition(frag->out->states[i], 0, end);         // exit
+    }
 
-//             // Merge outputs
-//             StateSet *out = create_state_set(DEFAULT_CAPACITY + left.out->count + right.out->count);
-//             for (int i = 0; i < left.out->count; i++)
-//                 out = add_state(out, left.out->states[i]);
-//             for (int i = 0; i < right.out->count; i++)
-//                 out = add_state(out, right.out->states[i]);
+    free_state_set(frag->out);
 
-//             free_state_set(left.out);
-//             free_state_set(right.out);
+    StateSet *out = create_state_set(DEFAULT_CAPACITY);
+    out = add_state(out, end);
+    frag->out = out;
+    DBG("Applied PLUS operator (%d → %d)\n", frag->start->id, end->id);
+}
 
-//             DBG("Created ALT fragment (%d → {%d, %d})\n", start->id, left.start->id, right.start->id);
-//             return (NFAFragment){ .start = start, .out = out };
-//         }
 
-//         default:
-//             ERR("Unsupported regex node type: %d\n", node->type);
-//             return (NFAFragment){0};
-//     }
-// }
+void nfa_op_optional_case(NFAFragment *frag) {
+    NFAState *start = create_state(g_state_id++, 0);
+    NFAState *end   = create_state(g_state_id++, 0);
+
+    add_transition(start, 0, frag->start);
+    add_transition(start, 0, end);
+    for (int i = 0; i < frag->out->count; i++) {
+        add_transition(frag->out->states[i], 0, end);
+    }
+
+    free_state_set(frag->out);
+
+    StateSet *out = create_state_set(DEFAULT_CAPACITY);
+    out = add_state(out, end);
+    *frag = nfa_frag_create(start, out);
+    DBG("Applied OPTIONAL operator (%d → %d)\n", start->id, end->id);
+}
+
+void handle_operator(RegexOperator op, NFAFragment *frag) {
+
+    if (op == OP_STAR) {
+        nfa_op_star_case(frag);
+    } else if (op == OP_PLUS) {
+        nfa_op_plus_case(frag);
+    } else if (op == OP_OPTIONAL) {
+        nfa_op_optional_case(frag);
+    } else if (op == OP_NONE) {
+        return ;
+    } else {
+        ERR("Unknown operator: %d\n", op);
+    }
+
+}
 
 NFAFragment thompson_from_tree(RegexTreeNode *node) {
+    NFAFragment frag = {};
+
     if (!node) {
         ERR("Null regex node!\n");
-        return (NFAFragment){0};
+        return (nfa_frag_create(NULL, NULL));
     }
 
-    NFAFragment frag;
-
-    switch (node->type) {
-
-        case REG_CHAR: {
-            NFAState *s = create_state(g_state_id++, 0);
-            NFAState *e = create_state(g_state_id++, 0);
-            add_transition(s, node->c, e);
-
-            StateSet *out = create_state_set(DEFAULT_CAPACITY);
-            out = add_state(out, e);
-
-            frag = (NFAFragment){ .start = s, .out = out };
-            DBG("Created CHAR fragment '%c' (%d → %d)\n", node->c, s->id, e->id);
-            break;
-        }
-
-        case REG_CONCAT: {
-            NFAFragment left = thompson_from_tree(node->left);
-            NFAFragment right = thompson_from_tree(node->right);
-
-            for (int i = 0; i < left.out->count; i++)
-                add_transition(left.out->states[i], 0, right.start);
-
-            free_state_set(left.out);
-            frag = (NFAFragment){ .start = left.start, .out = right.out };
-            DBG("Concatenated fragments (%d → %d)\n", left.start->id, right.start->id);
-            break;
-        }
-
-        case REG_ALT: {
-            NFAFragment left = thompson_from_tree(node->left);
-            NFAFragment right = thompson_from_tree(node->right);
-
-            NFAState *start = create_state(g_state_id++, 0);
-            add_transition(start, 0, left.start);
-            add_transition(start, 0, right.start);
-
-            StateSet *out = create_state_set(DEFAULT_CAPACITY + left.out->count + right.out->count);
-            for (int i = 0; i < left.out->count; i++)
-                out = add_state(out, left.out->states[i]);
-            for (int i = 0; i < right.out->count; i++)
-                out = add_state(out, right.out->states[i]);
-
-            free_state_set(left.out);
-            free_state_set(right.out);
-
-            frag = (NFAFragment){ .start = start, .out = out };
-            DBG("Created ALT fragment (%d → {%d, %d})\n", start->id, left.start->id, right.start->id);
-            break;
-        }
-
-        default:
-            ERR("Unsupported regex node type: %d\n", node->type);
-            return (NFAFragment){0};
+    if (node->type == REG_CHAR) {
+        nfa_char_case(node, &frag);
+    } else if (node->type == REG_CONCAT) {
+        nfa_concat_case(node, &frag);
+    } else if (node->type == REG_ALT) {
+        nfa_alt_case(node, &frag);
+    } else {
+        ERR("Unsupported regex node type: %d\n", node->type);
+        return (nfa_frag_create(NULL, NULL));
     }
 
-    /* --- Gestion des opérateurs *, +, ? --- */
-    switch (node->op) {
-        case OP_STAR: {
-            NFAState *start = create_state(g_state_id++, 0);
-            NFAState *end   = create_state(g_state_id++, 0);
+    handle_operator(node->op, &frag);
 
-            add_transition(start, 0, frag.start); // epsilon to fragment start
-            add_transition(start, 0, end);        // epsilon to exit
-            for (int i = 0; i < frag.out->count; i++)
-                add_transition(frag.out->states[i], 0, frag.start); // loop
-            for (int i = 0; i < frag.out->count; i++)
-                add_transition(frag.out->states[i], 0, end);         // exit
-
-            free_state_set(frag.out);
-
-            StateSet *out = create_state_set(DEFAULT_CAPACITY);
-            out = add_state(out, end);
-            frag = (NFAFragment){ .start = start, .out = out };
-            DBG("Applied STAR operator (%d → %d)\n", start->id, end->id);
-            break;
-        }
-
-        case OP_PLUS: {
-            NFAState *end = create_state(g_state_id++, 0);
-
-            for (int i = 0; i < frag.out->count; i++)
-                add_transition(frag.out->states[i], 0, frag.start); // loop
-            for (int i = 0; i < frag.out->count; i++)
-                add_transition(frag.out->states[i], 0, end);         // exit
-
-            free_state_set(frag.out);
-
-            StateSet *out = create_state_set(DEFAULT_CAPACITY);
-            out = add_state(out, end);
-            frag.out = out;
-            DBG("Applied PLUS operator (%d → %d)\n", frag.start->id, end->id);
-            break;
-        }
-
-        case OP_OPTIONAL: {
-            NFAState *start = create_state(g_state_id++, 0);
-            NFAState *end   = create_state(g_state_id++, 0);
-
-            add_transition(start, 0, frag.start);
-            add_transition(start, 0, end);
-            for (int i = 0; i < frag.out->count; i++)
-                add_transition(frag.out->states[i], 0, end);
-
-            free_state_set(frag.out);
-
-            StateSet *out = create_state_set(DEFAULT_CAPACITY);
-            out = add_state(out, end);
-            frag = (NFAFragment){ .start = start, .out = out };
-            DBG("Applied OPTIONAL operator (%d → %d)\n", start->id, end->id);
-            break;
-        }
-
-        case OP_NONE:
-        default:
-            break;
-    }
-
-    return frag;
+    return (frag);
 }
 
 

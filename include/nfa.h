@@ -32,9 +32,6 @@ typedef struct NFAFragment {
     StateSet    *out;       /* Out state to link */
 } NFAFragment;
 
-
-
-
 int *get_state_id_counter();
 #define g_state_id (*get_state_id_counter())
 
@@ -55,5 +52,6 @@ void        match_nfa_anywhere(NFAState* start, char* input);
 /* Debug function */
 void        print_states_set(const char* msg, StateSet* set);
 void        print_nfa_state(NFAState* s);
+void print_nfa_fragment(const char* msg, NFAFragment* frag);
 
 #endif /* NFA_IMPLEMENTATION_H */
