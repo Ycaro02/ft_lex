@@ -47,7 +47,7 @@ function test_regex() {
         return 0
     else
         log KO "${BOLD_YELLOW}${regex}${RESET} with input: ${BOLD_PURPLE}${test_str}${RESET}"
-        log E "Expected: '${lex_match}', Got: '${ft_lex_match}'"
+        log E "Expected:\n\n${lex_match}\n\nGot:\n${ft_lex_match}"
         return 1
     fi
 
@@ -58,8 +58,9 @@ make -s > /dev/null 2>&1
 function full_test() {
     # Basic tests concat
     test_regex "ab" "abbbKO a b ab aba"
-    test_regex "abc" "abbbKO a b ab aba abc abca abcb"
     test_regex "abcd" "abbbKO a b ab aba abc abca abcb abcd abcde"
+    test_regex "abcd|ab" "aXkob abcdasYb aZb a b ab adbabkoskkpokkod"
+    test_regex "ab|abcd" "aXkabcdaboab abcdasYb aZbabcd a b ab adbabkoskkpokkod"
 
     # Basic tests +
     test_regex "ab+" "abbbKO a b ab aba"
@@ -70,6 +71,7 @@ function full_test() {
     test_regex "(ab)+" "abbbKO a b ab aba aabb abbba"
     test_regex "(ab)+b" "abbbKO a b ab aba aabb abbba"
     test_regex "ko|(ab)+" "aXb aYb aZb a b ab abbbbb"
+   
     # Test *
     test_regex "a*b" "aXb aYb aZb a b ab"
     test_regex "ab*" "aXb aYb aZb a b ab"
@@ -84,6 +86,7 @@ function full_test() {
     test_regex "ab?" "aXb aYb aZb a b ab"
     test_regex "a?b" "aXb aYb aZb a b ab"
     test_regex "a?b?" "aXb aYb aZb a b ab"
+    test_regex "(ab?)|b?" "dsaabababababbbabbaa"
 
     # Test alt |
     test_regex "ab|ko" "abbbKO a ko ok KOko"
@@ -97,11 +100,11 @@ function full_test() {
     test_regex ".*" "aXb1 ( aYb aZb a b ab"
 
     # hard case
-    # test_regex "l?|ab" "al all lll aXb1 ( aYb aZb a b ab b bb bbb ab ab ab"
-    # test_regex "a.*b" "aXb1 ( aYb aZb a b ab"
+    test_regex "a.*b" "aXb1 ( aYb aZb a b ab"
+    test_regex "l?|ab" "al all lll aXb1 ( aYb aZb a b ab b bb bbb ab ab ab"
 
-    # Test class []
-    # test_regex "[abc]+" "abbbKO a b ab aba 0000 00"
+    # test_regex "[a-z]" "aXb1 ( aYb aZb a b ab ko KOko"
+
 }
 
 function no_op_test {
@@ -112,7 +115,8 @@ function no_op_test {
     test_regex "ab|abcd" "aXkabcdaboab abcdasYb aZbabcd a b ab adbabkoskkpokkod"
 }
 
-no_op_test
+# no_op_test
 
+full_test
 
 rm -f ${LEXER_FILE}
