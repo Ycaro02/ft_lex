@@ -33,6 +33,16 @@ display_double_color_msg () {
 }
 
 
+
+# Colors for OK and KO
+BOLD_GREEN="\e[1;32m"
+BOLD_RED="\e[1;31m"
+
+
+OK="[${BOLD_GREEN}OK${RESET}]"
+KO="[${BOLD_RED}KO${RESET}]"
+
+
 # D for log DEBUG
 # I for log info
 # W for log WARNING
@@ -52,19 +62,19 @@ log() {
 	case ${level} in
 
 		"I")
-			echo -n -e "${date_str}${GREEN}[ INF ]${RESET} ${msg}\n"
+			echo -e "${date_str}${GREEN}[ INF ]${RESET} ${msg}"
 			;;
 
 		"W")
-			echo -n -e "${date_str}${YELLOW}[ WAR ]${RESET} ${msg}\n"
+			echo -e "${date_str}${YELLOW}[ WAR ]${RESET} ${msg}"
 		;;
 
 		"E")
-			echo -n -e "${date_str}${RED}[ ERR ]${RESET} ${msg}\n"
+			echo -e "${date_str}${RED}[ ERR ]${RESET} ${msg}"
 		;;
 
 		"D")
-			echo -n -e "${date_str}${CYAN}[ DBG ]${RESET} ${msg}\n"
+			echo -e "${date_str}${CYAN}[ DBG ]${RESET} ${msg}"
 		;;
 
         "N")
@@ -72,8 +82,16 @@ log() {
             echo "${msg}"
         ;;
 
+        "OK")
+            echo -e "${date_str} ${OK} ${msg}"
+        ;;
+
+        "KO")
+            echo -e "${date_str} ${KO} ${msg}"
+        ;;
+
 		*)
-			echo -n -e "${date_str}${RED}Unkow level: ${msg} ${RESET}\n"
+			echo -e "${date_str}${RED}Unkow level: ${msg} ${RESET}"
     	;;
 	esac
 

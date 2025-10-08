@@ -5,14 +5,9 @@ ROOT_DIR=$(pwd)
 
 source ${ROOT_DIR}/rsc/sh/bash_log.sh
 
-# Colors for OK and KO
-BOLD_GREEN="\e[1;32m"
-BOLD_RED="\e[1;31m"
+
 BOLD_YELLOW="\e[1;33m"
 BOLD_PURPLE="\e[1;35m"
-
-OK="[${BOLD_GREEN}OK${RESET}]"
-KO="[${BOLD_RED}KO${RESET}]"
 
 LEX=${ROOT_DIR}/rsc/run_lex.sh
 
@@ -47,10 +42,11 @@ function test_regex() {
     local ft_lex_match=$(${FT_LEX_TEST} "${regex}" "${test_str}" | grep "Match Rule" | awk '{ for (i=4; i<=NF; i++) printf "%s%s", $i, (i<NF ? OFS : ORS) }')
 
     if [[ "${lex_match}" == "${ft_lex_match}" ]]; then
-        log I "${OK}: ${BOLD_YELLOW}${regex}${RESET} with input: ${BOLD_PURPLE}${test_str}${RESET}"
+        # log I "${OK}: ${BOLD_YELLOW}${regex}${RESET} with input: ${BOLD_PURPLE}${test_str}${RESET}"
+        log OK "${BOLD_YELLOW}${regex}${RESET} with input: ${BOLD_PURPLE}${test_str}${RESET}"
         return 0
     else
-        log E "${KO}: ${BOLD_YELLOW}${regex}${RESET} with input: ${BOLD_PURPLE}${test_str}${RESET}"
+        log KO "${BOLD_YELLOW}${regex}${RESET} with input: ${BOLD_PURPLE}${test_str}${RESET}"
         log E "Expected: '${lex_match}', Got: '${ft_lex_match}'"
         return 1
     fi

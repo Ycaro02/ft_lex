@@ -1,44 +1,44 @@
 #include "../include/log.h"
 #include "../include/regex_tree.h"
 
-typedef struct ClassDef {
-    char charset[1024];
-    s8   reverse_match;
-} ClassDef;
+// typedef struct ClassDef {
+//     char charset[1024];
+//     s8   reverse_match;
+// } ClassDef;
 
-s8 parse_class_exp(char *exp) {
-    ClassDef class_def = { .charset = "", .reverse_match = 0 };
-    int i = 0, j = 0;
+// s8 parse_class_exp(char *exp) {
+//     ClassDef class_def = { .charset = "", .reverse_match = 0 };
+//     int i = 0, j = 0;
 
-    if (exp[i] == '^') {
-        class_def.reverse_match = 1;
-        i++;
-    }
+//     if (exp[i] == '^') {
+//         class_def.reverse_match = 1;
+//         i++;
+//     }
 
-    int exp_len = strlen(exp);
+//     int exp_len = strlen(exp);
 
-    while (exp[i] != 0) {
+//     while (exp[i] != 0) {
 
-        if (i + 2 < exp_len) {
-            if (exp[i + 1] == '-' && exp[i + 2] && exp[i] < exp[i + 2]) {
-                for (char c = exp[i]; c <= exp[i + 2]; c++) {
-                    class_def.charset[j] = c;
-                    j++;
-                }
-                i += 3;
-            }
-        } else {
-            class_def.charset[j] = exp[i];
-            j++;
-            i++;
+//         if (i + 2 < exp_len) {
+//             if (exp[i + 1] == '-' && exp[i + 2] && exp[i] < exp[i + 2]) {
+//                 for (char c = exp[i]; c <= exp[i + 2]; c++) {
+//                     class_def.charset[j] = c;
+//                     j++;
+//                 }
+//                 i += 3;
+//             }
+//         } else {
+//             class_def.charset[j] = exp[i];
+//             j++;
+//             i++;
 
-        }
-    }
+//         }
+//     }
 
-    INFO("CHARSET: %s\n", class_def.charset);
-    return (1);
+//     INFO("CHARSET: %s\n", class_def.charset);
+//     return (1);
 
-}
+// }
 
 
 /**
