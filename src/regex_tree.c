@@ -99,7 +99,7 @@ static void print_regex_node(RegexTreeNode* r, char* prefix, int is_last) {
             break;
     }
     
-    // Prepare prefix for children
+    /* Prepare prefix for children */
     char new_prefix[256] = {};
     snprintf(new_prefix, sizeof(new_prefix), "%s%s", prefix, is_last ? "    " : "│   ");
     

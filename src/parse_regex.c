@@ -8,7 +8,7 @@
  */
 static RegexTreeNode* parse_class(String *s) {
     if (peek(s) == '[') {
-        next(s); // skip '['
+        next(s); /* skip '[' */
 
         char buffer[256] = {0};
         int idx = 0;
@@ -23,7 +23,7 @@ static RegexTreeNode* parse_class(String *s) {
         }
         buffer[idx] = '\0';
 
-        if (peek(s) == ']') next(s); // skip ']'
+        if (peek(s) == ']') next(s); /* skip ']' */
 
         return RegexTreeNode_create(REG_CLASS, NULL, NULL, buffer, 0);
     }
@@ -37,17 +37,17 @@ static RegexTreeNode* parse_class(String *s) {
  * @return The root of the atom subtree
  */
 static RegexTreeNode* parse_atom(String *s) {
-    // First try to parse a character class
+    /* First try to parse a character class */
     RegexTreeNode* class_node = parse_class(s);
     if (class_node) {
         return class_node;
     }
     
-    // Then try to parse parentheses
+    /* Then try to parse parentheses */
     if (peek(s) == '(') {
-        next(s); // skip '('
+        next(s); /* skip '(' */
         RegexTreeNode* r = parse_regex(s);
-        if (peek(s) == ')') next(s); // skip ')'
+        if (peek(s) == ')') next(s); /* skip ')' */
         return r;
     } else {
         char c = next(s);
@@ -64,7 +64,7 @@ static RegexTreeNode* parse_repeat(String *s) {
     char c = peek(s);
 
     if (c == '*' || c == '+' || c == '?') {
-        next(s); // Consomme le symbole
+        next(s); /* Consomme le symbole */
         switch (c) {
             case '*': atom->op = OP_STAR; break;
             case '+': atom->op = OP_PLUS; break;
@@ -83,7 +83,7 @@ static RegexTreeNode* parse_concat(String *s) {
 
     while (!end(s)) {
         char c = peek(s);
-        if (c == ')' || c == '|') break; // end concatenation on ')' or '|'
+        if (c == ')' || c == '|') break; /* end concatenation on ')' or '|' */
 
         RegexTreeNode* right = parse_repeat(s);
         left = RegexTreeNode_create(REG_CONCAT, left, right, NULL, 0);
@@ -100,7 +100,7 @@ static RegexTreeNode* parse_alt(String *s) {
     RegexTreeNode* left = parse_concat(s);
 
     while (peek(s) == '|') {
-        next(s); // skip '|'
+        next(s); /* skip '|' */
         RegexTreeNode* right = parse_concat(s);
         left = RegexTreeNode_create(REG_ALT, left, right, NULL, 0);
     }
