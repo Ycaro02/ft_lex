@@ -50,7 +50,7 @@ int main(int argc, char* argv[]) {
     INFO("=====================================\n");
 
     INFO("Matching input: '%s'\n", input);
-    match_nfa_anywhere(input);
+    match_nfa_anywhere(argv[1], input);
     
     nfa_free();
     RegexTreeNode_free(tree);

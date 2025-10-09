@@ -36,12 +36,9 @@ function test_regex() {
 
     # log N "Testing regex: '${regex}' with input: '${test_str}'"
 
-    # echo "TEST REGEX: ${regex}"
-    # echo "TEST STR: ${test_str}"
-
-    local lex_output=$(${LEX} ${LEXER_FILE} ${test_str})
+    local lex_output=$(${LEX} ${LEXER_FILE} \'${test_str}\')
     local lex_match=$(echo -e "${lex_output}" | grep "Match Rule" | cut -d ' ' -f 4-)
-    local ft_lex_match=$(${FT_LEX_TEST} "${regex}" ${test_str} | grep "Match Rule" | cut -d ' ' -f 4- )
+    local ft_lex_match=$(${FT_LEX_TEST} "${regex}" \'${test_str}\' | grep "Match Rule" | cut -d ' ' -f 4- )
 
     if [[ "${lex_match}" == "${ft_lex_match}" ]]; then
         log OK "${BOLD_YELLOW}${regex}${RESET} with input: ${BOLD_PURPLE}${test_str}${RESET}"
@@ -57,12 +54,55 @@ function test_regex() {
 make -s > /dev/null 2>&1
 
 function test_class() {
+    # First test for letter and dot '.'
     test_regex '[a-z*]' '*aXb1 * TE'
     test_regex '[0-38-9^@A-B*]' '*aXb1  ( aYb aZb a b ab ko KOko 456 9 ^ @ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z'
     test_regex '[a-z]' 'aXb1 ( aYb aZb a b ab ko KOko'
+    test_regex '[^.a-z]' 'aXb1 ( aYb aZb a b ab ko KOko'
+    test_regex '[a-z.]' 'aXb1.aYbaZb a b ab ko KOko'
+    
+    # Test for number
+    test_regex '[0-9]' 'abc123def456ghi789'
+    test_regex '[^0-9]' 'abc123def456ghi789'
+    test_regex '[0-5]' '0123456789'
+    
+    # Test for uppercase letters
+    test_regex '[A-Z]' 'Hello World 123'
+    test_regex '[^A-Z]' 'Hello World 123'
+    test_regex '[A-F]' 'ABCDEFGHIJKLMNOP'
+    
+    # Test for special literal characters
+    test_regex '[+*?]' 'hello+world*test?end'
+    test_regex '[(){}]' 'func(a, b) { return a + b; }'
+    test_regex '[\\[\\]]' 'array[0] = values[index]'
+    test_regex '[|&]' 'cmd1 | cmd2 && cmd3'
+    
+    # Tests mixtes
+    test_regex '[a-zA-Z]' 'Hello123World456'
+    test_regex '[a-zA-Z0-9]' 'Hello123World456!@#'
+    test_regex '[^a-zA-Z0-9]' 'Hello123World456!@#'
+    
+    # Tests with hyphen '-'
+    test_regex '[a-z-]' 'hello-world-test'
+    test_regex '[-a-z]' 'hello-world-test'
+    
+    # Tests negation complexes
+    test_regex '[^aeiou]' 'hello world'
+    test_regex '[^0-9a-f]' 'abc123def456xyz'
+    test_regex '[^A-Z ]' 'Hello World Test'
+    
+    # Tests with space characters
+    test_regex '[ \t]' 'hello	world test'
+    test_regex '[^ ]' 'hello world test'
+    
+    # Tests with single characters
+    test_regex '[a]' 'abcdefg'
+    test_regex '[^a]' 'abcdefg'
+    test_regex '[z]' 'abcdefghijklmnopqrstuvwxyz'
+
 }
 
-function full_test() {
+function test_no_class() {
     # Basic tests concat
     test_regex "ab" "abbbKO a b ab aba"
     test_regex "abcd" "abbbKO a b ab aba abc abca abcb abcd abcde"
@@ -110,11 +150,9 @@ function full_test() {
     test_regex "a.*b" "aXb1 ( aYb aZb a b ab"
     test_regex "l?|ab" "al all lll aXb1 ( aYb aZb a b ab b bb bbb ab ab ab"
 
-    # test_regex "[a-z]" "aXb1 ( aYb aZb a b ab ko KOko"
-
 }
 
-function no_op_test {
+function test_no_op {
     test_regex "ab" "aXb aYb aZb a b ab"
     test_regex "ab|ko" "aXkob aYb aZb a b ab adbabkoskkpokkod"
     test_regex "aZb|ab|ko" "aXkob aYb aZb a b ab adbabkoskkpokkod"
@@ -122,10 +160,10 @@ function no_op_test {
     test_regex "ab|abcd" "aXkabcdaboab abcdasYb aZbabcd a b ab adbabkoskkpokkod"
 }
 
-# no_op_test
-
-full_test
+test_no_op
+test_no_class
 test_class
+
 
 
 rm -f ${LEXER_FILE}

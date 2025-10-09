@@ -68,7 +68,7 @@ static u32 create_state(u32 is_final) {
  * Automatically grows the transitions array if capacity is reached.
  * This allows unlimited transitions per state.
  */
-static void add_transition(u32 from_id, char c, u32 to_id) {
+static void add_transition(u32 from_id, u8 c, u32 to_id) {
     NFAState *s = &g_nfa.states[from_id];
     
     /* Reallocate if necessary (double the capacity) */
@@ -133,7 +133,10 @@ static void frag_free(NFAFragment *f) {
 static NFAFragment nfa_char(char c) {
     u32 s = create_state(0);
     u32 e = create_state(0);
-    add_transition(s, c, e);
+    
+    /* Convert '.' to special wildcard character */
+    u8 transition_char = (c == '.') ? NFA_DOT_CHAR : c;
+    add_transition(s, transition_char, e);
     
     NFAFragment frag = frag_create(s);
     frag_add_out(&frag, e);
@@ -274,6 +277,28 @@ static NFAFragment nfa_optional(NFAFragment frag) {
     return result;
 }
 
+static NFAFragment nfa_class(ClassDef *class) {
+    NFAFragment frag = frag_create(create_state(0));
+    for (u32 i = 1; i < 128; i++) {
+        if (!class->reverse_match && bitmap_is_set(&class->char_bitmap, i)) {
+            u32 s = create_state(0);
+            u32 e = create_state(0);
+            INFO("Adding transition for char (%c)\n", i);
+            add_transition(s, (char)i, e);
+            add_transition(frag.start_id, 0, s);
+            frag_add_out(&frag, e);
+        } else if (class->reverse_match && !bitmap_is_set(&class->char_bitmap, i)) {
+            u32 s = create_state(0);
+            u32 e = create_state(0);
+            INFO("Adding transition REVERSE for char (%c)\n", i);
+            add_transition(s, (char)i, e);
+            add_transition(frag.start_id, 0, s);
+            frag_add_out(&frag, e);
+        }
+    }
+    return (frag);
+}
+
 /**
  * @brief Convert a regex parse tree to NFA using Thompson's construction
  * @param node Root of the regex parse tree
@@ -296,32 +321,15 @@ NFAFragment thompson_from_tree(RegexTreeNode *node) {
             break;
             
         case REG_CONCAT:
-            frag = nfa_concat(
-                thompson_from_tree(node->left),
-                thompson_from_tree(node->right)
-            );
+            frag = nfa_concat(thompson_from_tree(node->left), thompson_from_tree(node->right));
             break;
             
         case REG_ALT:
-            frag = nfa_alt(
-                thompson_from_tree(node->left),
-                thompson_from_tree(node->right)
-            );
+            frag = nfa_alt(thompson_from_tree(node->left), thompson_from_tree(node->right));
             break;
-
         case REG_CLASS:
-            frag = frag_create(create_state(0));
-            for (u32 i = 0; i < BITMAP_SIZE(node->class->char_bitmap.size); i++) {
-                if (bitmap_is_set(&node->class->char_bitmap, i)) {
-                    u32 s = create_state(0);
-                    u32 e = create_state(0);
-                    add_transition(s, (char)i, e);
-                    add_transition(frag.start_id, 0, s);
-                    frag_add_out(&frag, e);
-                }
-            }
+            frag = nfa_class(node->class);
             break;
-            
         default:
             fprintf(stderr, "ERROR: Unknown node type %d\n", node->type);
             return frag_create(-1);

@@ -75,7 +75,7 @@ static char *match_nfa(char *input) {
             
             NFAState *s = &g_nfa.states[i];
             for (u32 j = 0; j < s->trans_count; j++) {
-                if (s->trans[j].c == '.' || s->trans[j].c == *ptr) {
+                if (s->trans[j].c == NFA_DOT_CHAR || s->trans[j].c == *ptr) {
                     bitmap_set(&next, s->trans[j].to_id);
                 }
             }
@@ -129,7 +129,7 @@ static char *match_nfa(char *input) {
  * Repeatedly attempts to match starting from each position in the input,
  * printing all matches found. Skips zero-length matches to avoid infinite loops.
  */
-void match_nfa_anywhere(char *input) {
+void match_nfa_anywhere(char *regex_str, char *input) {
     char *p = input;
     
     while (*p) {
@@ -137,7 +137,7 @@ void match_nfa_anywhere(char *input) {
         if (match) {
             int len = match - p;
             if (len == 0) { p++; continue;}  /* Skip zero-length matches */
-            printf("✅ Match Rule: ");
+            printf("✅Match Rule: %s ", regex_str);
             for (int i = 0; i < len; i++) {
                 putchar(p[i]);
             }

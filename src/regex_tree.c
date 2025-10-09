@@ -6,10 +6,10 @@ void char_bitmap_display(Bitmap *b) {
     INFO("Character Bitmap: ");
     for (u32 i = 0; i < BITMAP_SIZE(b->size) ; i++) {
         if (bitmap_is_set(b, i)) {
-            if (i >= 32 && i <= 126) {
+            if (i >= 33 && i <= 126) {
                 printf("%c ", (char)i);
             } else {
-                printf("%d ", i);
+                printf("%d ", (int)i);
             }
         }
     }
@@ -45,14 +45,6 @@ ClassDef *class_exp_to_bitmap(char *exp) {
     INFO("Parsing class expression: '%s'\n", exp);
 
     int i = 0;
-
-    // if (exp[i] == '[') {
-    //     i++;
-    // } else {
-    //     ERR("Invalid class expression, missing '[' at the start\n");
-    //     free_class(class);
-    //     return (NULL);
-    // }
 
     if (exp[i] == '^') {
         class->reverse_match = 1;
@@ -104,8 +96,6 @@ char *class_to_string(ClassDef *class) {
         snprintf(buff + strlen(buff), sizeof(buff) - strlen(buff), "^");
     }
 
-    // snprintf(buff + strlen(buff), sizeof(buff) - strlen(buff), "[");
-
     for (u32 i = 0; i < BITMAP_SIZE(class->char_bitmap.size); i++) {
         if (bitmap_is_set(&class->char_bitmap, i)) {
             if (i >= 32 && i <= 126) {
@@ -115,8 +105,6 @@ char *class_to_string(ClassDef *class) {
             }
         }
     }
-
-    // snprintf(buff + strlen(buff), sizeof(buff) - strlen(buff), "]");
 
     return (buff);
 }

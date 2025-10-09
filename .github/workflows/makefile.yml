@@ -17,14 +17,8 @@ jobs:
       with:
         submodules: true
 
-    # ssh setup
-    - name: Setup SSH
-      uses: webfactory/ssh-agent@v0.5.3
-      with:
-        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-    
     - name: Run make
-      run: make
+      run:  apt update && apt install -y clang make make
 
-    - name: clean
-      run: make fclean
+    - name: make test_match
+      run: apt update && apt install -y flex && make test_match

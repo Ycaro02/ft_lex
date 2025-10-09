@@ -7,8 +7,12 @@
 
 /* Initial capacity for the NFA states array */
 #define DEFAULT_NFA_CAPACITY 64
+
 /* Initial capacity for the transitions array in each state */
 #define INITIAL_TRANSITIONS_CAPACITY 8
+
+/* Special character code for wildcard (.) transitions */
+#define NFA_DOT_CHAR 200
 
 /**
  * @brief Represents a transition from one state to another
@@ -16,7 +20,7 @@
  * A transition is triggered by a specific character or epsilon (0).
  */
 typedef struct {
-    char    c;          /* Character to match (0 for epsilon transition) */
+    unsigned char    c;          /* Character to match (0 for epsilon transition) */
     int     to_id;      /* ID of the destination state */
 } Transition;
 
@@ -76,7 +80,7 @@ NFAFragment thompson_from_tree(RegexTreeNode *node);
 
 
 /* nfa/nfa_match.c */
-void match_nfa_anywhere(char *input);
+void        match_nfa_anywhere(char *regex_str, char *input);
 
 /* nfa/nfa_display.c */
 void        print_nfa_tree(void);
