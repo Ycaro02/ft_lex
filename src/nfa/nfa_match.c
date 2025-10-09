@@ -19,6 +19,7 @@ static void epsilon_closure(Bitmap *states) {
             for (u32 j = 0; j < s->trans_count; j++) {
                 if (s->trans[j].c == 0) {  /* epsilon transition */
                     if (!bitmap_is_set(states, s->trans[j].to_id)) {
+                        // INFO("Set bit for state ID %d via epsilon from state ID %d\n", s->trans[j].to_id, s->id);
                         bitmap_set(states, s->trans[j].to_id);
                         changed = 1;
                     }
@@ -26,6 +27,14 @@ static void epsilon_closure(Bitmap *states) {
             }
         }
     }
+}
+
+
+void bitmap_swap(Bitmap *dest, Bitmap *src) {
+    void *tmp = dest->bits;
+
+    dest->bits = src->bits;
+    src->bits = tmp;
 }
 
 /**
@@ -38,7 +47,11 @@ static void epsilon_closure(Bitmap *states) {
  */
 static char *match_nfa(char *input) {
     Bitmap current, next;
-    bitmap_clear(&current);
+
+    bitmap_init(&current, BITMAP_STATE_ARRAY_SIZE);
+    bitmap_init(&next, BITMAP_STATE_ARRAY_SIZE);
+
+    // bitmap_clear(&current);
     bitmap_set(&current, g_nfa.start_id);
     epsilon_closure(&current);
     
@@ -72,7 +85,7 @@ static char *match_nfa(char *input) {
         
         /* If no states reachable, stop */
         int has_states = 0;
-        for (int i = 0; i < 4; i++) {
+        for (u32 i = 0; i < BITMAP_STATE_ARRAY_SIZE; i++) {
             if (next.bits[i]) {
                 has_states = 1;
                 break;
@@ -88,7 +101,8 @@ static char *match_nfa(char *input) {
             }
         }
         
-        current = next;
+        bitmap_swap(&current, &next);
+        // current = next;
         ptr++;
     }
     
@@ -102,7 +116,10 @@ static char *match_nfa(char *input) {
         }
     }
     
-    return last_accept;
+    free(current.bits);
+    free(next.bits);
+
+    return (last_accept);
 }
 
 /**
