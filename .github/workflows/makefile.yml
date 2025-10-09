@@ -18,7 +18,7 @@ jobs:
         submodules: true
 
     - name: Run make
-      run:  apt update && apt install -y clang make make
+      run:  sudo apt update && sudo apt install -y clang make make
 
     - name: make test_match
-      run: apt update && apt install -y flex && make test_match
+      run: sudo apt update && sudo apt install -y flex && make test_match
