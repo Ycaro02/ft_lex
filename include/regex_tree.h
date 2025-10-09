@@ -20,8 +20,8 @@ typedef enum RegexType{
 
 
 typedef struct ClassDef {
-    Bitmap  char_bitmap;
-    s8      reverse_match;
+    Bitmap  char_bitmap;        /* bitmap for characters in the class */
+    s8      reverse_match;      /* if 1, reverse the match */
 } ClassDef;
 
 

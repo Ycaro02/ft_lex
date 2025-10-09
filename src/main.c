@@ -3,8 +3,7 @@
 #include "../include/nfa.h"
 
 
-
-int main(int argc, char* argv[]) {
+int tester(int argc, char **argv) {
     set_log_level(L_INFO);
     
     if (argc < 3) {
@@ -54,6 +53,10 @@ int main(int argc, char* argv[]) {
     
     nfa_free();
     RegexTreeNode_free(tree);
-    
     return (0);
+}
+
+
+int main(int argc, char* argv[]) {
+    return tester(argc, argv);
 }
