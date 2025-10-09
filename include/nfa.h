@@ -20,8 +20,8 @@
  * A transition is triggered by a specific character or epsilon (0).
  */
 typedef struct {
-    unsigned char    c;          /* Character to match (0 for epsilon transition) */
-    int     to_id;      /* ID of the destination state */
+    unsigned char    c;     /* Character to match (0 for epsilon transition) */
+    int     to_id;          /* ID of the destination state */
 } Transition;
 
 /**
@@ -67,12 +67,13 @@ typedef struct {
 /* nfa/nfa.c */
 
 /* Get the static NFA instance */
-NFA *__get_nfa(void);
+NFA             *__get_nfa(void);
 
 /* Macro to access the global NFA instance errno like macro */
-#define g_nfa (*__get_nfa())
+#define g_nfa   (*__get_nfa())
 
 
+/* NFA construction functions nfa/nfa.c */
 void        nfa_init(u32 capacity);
 void        nfa_free(void);
 void        nfa_finalize(NFAFragment *frag);
@@ -81,6 +82,7 @@ NFAFragment thompson_from_tree(RegexTreeNode *node);
 
 /* nfa/nfa_match.c */
 void        match_nfa_anywhere(char *regex_str, char *input);
+void        epsilon_closure(Bitmap *states);
 
 /* nfa/nfa_display.c */
 void        print_nfa_tree(void);

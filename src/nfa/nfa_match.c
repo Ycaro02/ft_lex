@@ -8,7 +8,7 @@
  * Iteratively adds all states reachable via epsilon transitions
  * until no new states can be added (fixed point).
  */
-static void epsilon_closure(Bitmap *states) {
+void epsilon_closure(Bitmap *states) {
     int changed = 1;
     while (changed) {
         changed = 0;
