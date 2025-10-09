@@ -29,20 +29,21 @@ EOF
 }
 
 function test_regex() {
-    local regex="${1}"
-    local test_str="${2}"
+    local regex=${1}
+    local test_str=${2}
 
     create_lexer_file "${regex}"
 
     # log N "Testing regex: '${regex}' with input: '${test_str}'"
 
-    local lex_output=$(${LEX} ${LEXER_FILE} "${test_str}")
-    local lex_match=$(echo -e "${lex_output}" | grep "Match Rule" | awk '{ for (i=4; i<=NF; i++) printf "%s%s", $i, (i<NF ? OFS : ORS) }')
+    # echo "TEST REGEX: ${regex}"
+    # echo "TEST STR: ${test_str}"
 
-    local ft_lex_match=$(${FT_LEX_TEST} "${regex}" "${test_str}" | grep "Match Rule" | awk '{ for (i=4; i<=NF; i++) printf "%s%s", $i, (i<NF ? OFS : ORS) }')
+    local lex_output=$(${LEX} ${LEXER_FILE} ${test_str})
+    local lex_match=$(echo -e "${lex_output}" | grep "Match Rule" | cut -d ' ' -f 4-)
+    local ft_lex_match=$(${FT_LEX_TEST} "${regex}" ${test_str} | grep "Match Rule" | cut -d ' ' -f 4- )
 
     if [[ "${lex_match}" == "${ft_lex_match}" ]]; then
-        # log I "${OK}: ${BOLD_YELLOW}${regex}${RESET} with input: ${BOLD_PURPLE}${test_str}${RESET}"
         log OK "${BOLD_YELLOW}${regex}${RESET} with input: ${BOLD_PURPLE}${test_str}${RESET}"
         return 0
     else
@@ -54,6 +55,12 @@ function test_regex() {
 }
 
 make -s > /dev/null 2>&1
+
+function test_class() {
+    test_regex '[a-z*]' '*aXb1 * TE'
+    test_regex '[0-38-9^@A-B*]' '*aXb1  ( aYb aZb a b ab ko KOko 456 9 ^ @ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z'
+    test_regex '[a-z]' 'aXb1 ( aYb aZb a b ab ko KOko'
+}
 
 function full_test() {
     # Basic tests concat
@@ -118,5 +125,7 @@ function no_op_test {
 # no_op_test
 
 full_test
+test_class
+
 
 rm -f ${LEXER_FILE}

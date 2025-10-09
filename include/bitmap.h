@@ -4,7 +4,7 @@
 #include "basic_define.h"
 
 /* Bitmap Array Size in bytes */
-#define BITMAP_STATE_ARRAY_SIZE 8ULL
+#define BITMAP_STATE_ARRAY_SIZE 10ULL
 
 /* Unsigned 64-bit integer type size in bits */
 #define U64_BITS_NB (sizeof(u64) * 8ULL)  /* Number of bits in u64 */

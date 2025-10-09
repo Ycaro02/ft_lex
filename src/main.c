@@ -2,44 +2,6 @@
 #include "../include/bitmap.h"
 #include "../include/nfa.h"
 
-// typedef struct ClassDef {
-//     char charset[1024];
-//     s8   reverse_match;
-// } ClassDef;
-
-// s8 parse_class_exp(char *exp) {
-//     ClassDef class_def = { .charset = "", .reverse_match = 0 };
-//     int i = 0, j = 0;
-
-//     if (exp[i] == '^') {
-//         class_def.reverse_match = 1;
-//         i++;
-//     }
-
-//     int exp_len = strlen(exp);
-
-//     while (exp[i] != 0) {
-
-//         if (i + 2 < exp_len) {
-//             if (exp[i + 1] == '-' && exp[i + 2] && exp[i] < exp[i + 2]) {
-//                 for (char c = exp[i]; c <= exp[i + 2]; c++) {
-//                     class_def.charset[j] = c;
-//                     j++;
-//                 }
-//                 i += 3;
-//             }
-//         } else {
-//             class_def.charset[j] = exp[i];
-//             j++;
-//             i++;
-
-//         }
-//     }
-
-//     INFO("CHARSET: %s\n", class_def.charset);
-//     return (1);
-
-// }
 
 
 int main(int argc, char* argv[]) {
@@ -51,12 +13,14 @@ int main(int argc, char* argv[]) {
     }
     
     char *input = argv[2];
+
     String s = {
         .str = argv[1],
         .pos = 0,
         .len = strlen(argv[1])
     };
-    
+
+
     INFO("Parsing regex: '%s'\n", s.str);
     INFO("=====================================\n");
     

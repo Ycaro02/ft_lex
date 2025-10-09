@@ -2,6 +2,7 @@
 #define REGEX_TREE_H
 
 #include "string_handler.h"
+#include "bitmap.h"
 
 typedef enum RegexOperator {
     OP_NONE,
@@ -18,11 +19,17 @@ typedef enum RegexType{
 } RegexType;
 
 
+typedef struct ClassDef {
+    Bitmap  char_bitmap;
+    s8      reverse_match;
+} ClassDef;
+
+
 typedef struct RegexTreeNode_s {
     RegexType               type;             /* type of the node */
     struct RegexTreeNode_s  *left;            /* left child */
     struct RegexTreeNode_s  *right;           /* right child */
-    char                    *class;           /* for character classes like [0-9] */
+    ClassDef                *class;           /* for character classes like [0-9] */
     char                    c;                /* for single characters */
     RegexOperator           op;               /* for operators like *, +, ? */
 } RegexTreeNode;

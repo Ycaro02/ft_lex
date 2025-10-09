@@ -308,6 +308,19 @@ NFAFragment thompson_from_tree(RegexTreeNode *node) {
                 thompson_from_tree(node->right)
             );
             break;
+
+        case REG_CLASS:
+            frag = frag_create(create_state(0));
+            for (u32 i = 0; i < BITMAP_SIZE(node->class->char_bitmap.size); i++) {
+                if (bitmap_is_set(&node->class->char_bitmap, i)) {
+                    u32 s = create_state(0);
+                    u32 e = create_state(0);
+                    add_transition(s, (char)i, e);
+                    add_transition(frag.start_id, 0, s);
+                    frag_add_out(&frag, e);
+                }
+            }
+            break;
             
         default:
             fprintf(stderr, "ERROR: Unknown node type %d\n", node->type);
