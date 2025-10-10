@@ -1,96 +1,8 @@
 #include "../include/log.h"
 #include "../include/bitmap.h"
 #include "../include/nfa.h"
+#include "../include/dfa.h"
 
-#define MAX_DFA_STATES 1024
-#define ALPHABET_SIZE 256
-
-/**
- * @brief Represents a DFA state
- * 
- * Each DFA state corresponds to a set of NFA states.
- */
-typedef struct {
-    u32     id;
-    u32     is_final;
-    u32     transitions[ALPHABET_SIZE];  /* transitions[c] = next state ID */
-    Bitmap  nfa_states;                  /* Set of NFA states this DFA state represents */
-} DFAState;
-
-/**
- * @brief The complete DFA
- */
-typedef struct {
-    DFAState    states[MAX_DFA_STATES];
-    u32         state_count;
-    u32         start_id;
-} DFA;
-
-static DFA g_dfa = {0};
-
-static int bitmap_equal(Bitmap *a, Bitmap *b) {
-    for (u32 i = 0; i < BITMAP_STATE_ARRAY_SIZE; i++) {
-        if (a->bits[i] != b->bits[i]) return 0;
-    }
-    return 1;
-}
-
-static void bitmap_copy(Bitmap *dest, Bitmap *src) {
-    for (u32 i = 0; i < BITMAP_STATE_ARRAY_SIZE; i++) {
-        dest->bits[i] = src->bits[i];
-    }
-}
-
-/* ========================================================================== */
-/*                         DFA STATE MANAGEMENT                               */
-/* ========================================================================== */
-
-/**
- * @brief Find DFA state with matching NFA state set
- * @return DFA state ID, or -1 if not found
- */
-static int find_dfa_state(Bitmap *nfa_set) {
-    for (u32 i = 0; i < g_dfa.state_count; i++) {
-        if (bitmap_equal(&g_dfa.states[i].nfa_states, nfa_set)) {
-            return i;
-        }
-    }
-    return -1;
-}
-
-/**
- * @brief Create new DFA state from NFA state set
- * @return New DFA state ID
- */
-static u32 create_dfa_state(Bitmap *nfa_set) {
-    if (g_dfa.state_count >= MAX_DFA_STATES) {
-        ERR("DFA state limit reached!\n");
-        exit(1);
-    }
-    
-    u32 id = g_dfa.state_count++;
-    DFAState *state = &g_dfa.states[id];
-    
-    state->id = id;
-    state->is_final = 0;
-    bitmap_init(&state->nfa_states, BITMAP_STATE_ARRAY_SIZE);
-    bitmap_copy(&state->nfa_states, nfa_set);
-    
-    /* Initialize all transitions to invalid (-1) */
-    for (u32 i = 0; i < ALPHABET_SIZE; i++) {
-        state->transitions[i] = (u32)-1;
-    }
-    
-    /* Check if any NFA state in this set is final */
-    for (u32 i = 0; i < g_nfa.state_count; i++) {
-        if (bitmap_is_set(nfa_set, i) && g_nfa.states[i].is_final) {
-            state->is_final = 1;
-            break;
-        }
-    }
-    
-    return id;
-}
 
 /* ========================================================================== */
 /*                         SUBSET CONSTRUCTION                                */
@@ -188,109 +100,6 @@ void nfa_to_dfa(void) {
          g_dfa.state_count, g_nfa.state_count);
 }
 
-void dfa_free(void) {
-    for (u32 i = 0; i < g_dfa.state_count; i++) {
-        free(g_dfa.states[i].nfa_states.bits);
-    }
-    g_dfa.state_count = 0;
-}
-
-
-/* ========================================================================== */
-/*                         DFA MATCHING                                       */
-/* ========================================================================== */
-
-/**
- * @brief Match input using DFA (much faster than NFA)
- * @return Pointer after longest match, or NULL
- */
-static char *match_dfa(char *input) {
-    u32 state = g_dfa.start_id;
-    char *ptr = input;
-    char *last_accept = NULL;
-    
-    /* Check if start state is final */
-    if (g_dfa.states[state].is_final) {
-        last_accept = ptr;
-    }
-    
-    while (*ptr) {
-        u32 next = g_dfa.states[state].transitions[(unsigned char)*ptr];
-        
-        /* No transition = dead state */
-        if (next == (u32)-1) break;
-        
-        state = next;
-        ptr++;
-        
-        if (g_dfa.states[state].is_final) {
-            last_accept = ptr;
-        }
-    }
-    
-    return last_accept;
-}
-
-/**
- * @brief Find all DFA matches in input
- */
-void match_dfa_anywhere(char *regex_str, char *input) {
-    char *p = input;
-    
-    while (*p) {
-        char *match = match_dfa(p);
-        if (match) {
-            int len = match - p;
-            if (len == 0) { p++; continue; }
-            
-            printf("✅Match Rule: %s ", regex_str);
-            for (int i = 0; i < len; i++) {
-                putchar(p[i]);
-            }
-            printf("\n");
-            p = match;
-        } else {
-            p++;
-        }
-    }
-}
-
-/* ========================================================================== */
-/*                         DFA DEBUG/DISPLAY                                  */
-/* ========================================================================== */
-
-void print_dfa(void) {
-    printf("=== DFA with %d states ===\n", g_dfa.state_count);
-    printf("Start: d%d\n\n", g_dfa.start_id);
-    
-    for (u32 i = 0; i < g_dfa.state_count; i++) {
-        DFAState *s = &g_dfa.states[i];
-        printf("State d%d%s (NFA states: {", s->id, s->is_final ? " [FINAL]" : "");
-        
-        /* Print NFA states */
-        int first = 1;
-        for (u32 j = 0; j < g_nfa.state_count; j++) {
-            if (bitmap_is_set(&s->nfa_states, j)) {
-                if (!first) printf(", ");
-                printf("%d", j);
-                first = 0;
-            }
-        }
-        printf("})\n");
-        
-        /* Print transitions */
-        for (u32 c = 1; c < ALPHABET_SIZE; c++) {
-            if (s->transitions[c] != (u32)-1) {
-                printf("  --'%c'--> d%d\n", 
-                       (c >= 32 && c < 127) ? c : '?', 
-                       s->transitions[c]);
-            }
-        }
-    }
-    printf("\n");
-}
-
-
 
 /* ========================================================================== */
 /*                   Compressed DFA Tables (like Flex does)                   */
@@ -358,8 +167,6 @@ static EquivClasses compute_equiv_classes(DFA *dfa) {
     ec.num_classes = next_class;
     return ec;
 }
-
-
 
 static char *match_dfa_table(char *input) {
     int state = g_dfa.start_id;
@@ -472,13 +279,13 @@ int tester(int argc, char **argv) {
     
     // print_nfa_tree();
     // INFO("=====================================\n");
-    // print_nfa();
+    print_nfa();
     // INFO("=====================================\n");
 
     INFO("Matching input: '%s'\n", input);
 
     nfa_to_dfa();
-    // print_dfa();
+    print_dfa();
     build_compress_dfa(&g_dfa);
     match_dfa_anywhere_table(argv[1], input);
 

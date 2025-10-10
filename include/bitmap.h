@@ -25,5 +25,7 @@ void    bitmap_init(Bitmap *b, u32 size);
 void    bitmap_clear(Bitmap *b);
 void    bitmap_set(Bitmap *b, u32 id);
 s8      bitmap_is_set(Bitmap *b, u32 id);
+s8      bitmap_equal(Bitmap *a, Bitmap *b);
+void    bitmap_copy(Bitmap *dest, Bitmap *src);
 
 #endif /* BIMAP_IMPLEMENTATION_H */

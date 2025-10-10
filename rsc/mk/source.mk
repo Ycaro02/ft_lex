@@ -12,6 +12,7 @@ SRCS			=	log.c\
 					nfa/nfa.c\
 					nfa/nfa_match.c\
 					nfa/nfa_display.c\
+					dfa/dfa.c\
 					utils/bitmap.c\
 					utils/trim.c\
 					utils/split.c\

@@ -46,3 +46,17 @@ s8 bitmap_is_set(Bitmap *b, u32 id) {
     }
     return 0;
 }
+
+
+s8 bitmap_equal(Bitmap *a, Bitmap *b) {
+    for (u32 i = 0; i < a->size; i++) {
+        if (a->bits[i] != b->bits[i]) return 0;
+    }
+    return 1;
+}
+
+void bitmap_copy(Bitmap *dest, Bitmap *src) {
+    for (u32 i = 0; i < src->size; i++) {
+        dest->bits[i] = src->bits[i];
+    }
+}
